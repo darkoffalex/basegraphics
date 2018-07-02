@@ -4,6 +4,144 @@
 #include <chrono>
 
 /**
+ * \brief Класс для работы с bitmap изображением
+ */
+class BitmapBuffer
+{
+private:
+	uint32_t width_;   // Ширина изображения
+	uint32_t height_;  // Высота изображения
+	RGBQUAD* data_;    // Данные о цветах пикселей (цвет одно пикселя описывает 4-байтная структура RGBQUAD)
+
+	/**
+	 * \brief Обменять значения полей текущего объекта с другим
+	 * \param other Другой объект
+	 */
+	void Swap(BitmapBuffer& other)
+	{
+		std::swap(this->width_, other.width_);
+		std::swap(this->height_, other.height_);
+		std::swap(this->data_, other.data_);
+		std::swap(this->pixels, other.pixels);
+	}
+
+public:
+	RGBQUAD** pixels;  // Массив указателей на массивы (доступ к данным как к 2-мерному массиву)
+
+	/**
+	 * \brief Конструктор по умолчанию
+	 * \details Не выделяет память, присваивает указателям nullptr
+	 */
+	BitmapBuffer() :width_(0), height_(0), data_(nullptr), pixels(nullptr) {}
+
+	/**
+	 * \brief Конструктор, инициализирует bitmap заполняя его цветом
+	 * \param width Ширина
+	 * \param height Высота
+	 * \param clearColor Цвет по умолчанию
+	 */
+	BitmapBuffer(const uint32_t width, const uint32_t height, RGBQUAD clearColor = { 0,0,0,0 }) :
+		width_(width),
+		height_(height),
+		data_(nullptr),
+		pixels(nullptr)
+	{
+		this->data_ = new RGBQUAD[this->width_ * this->height_];
+		this->pixels = new RGBQUAD*[this->height_];
+		std::fill_n(this->data_, this->width_ * this->height_, clearColor);
+
+		for (uint32_t i = 0; i < this->height_; i++) {
+			this->pixels[i] = this->data_ + this->width_ * i;
+		}
+	}
+
+	/**
+	 * \brief Конструктор копирования, копирует данные пикселей при присваивании объекта
+	 * \param other Объект из которого копируют
+	 */
+	BitmapBuffer(const BitmapBuffer& other) :
+		width_(other.width_),
+		height_(other.height_),
+		data_(other.data_ ? new RGBQUAD[other.width_ * other.height_] : nullptr),
+		pixels(other.pixels ? new RGBQUAD*[other.height_] : nullptr)
+	{
+		memcpy(this->data_, other.data_, other.GetSize());
+		memcpy(this->pixels, other.pixels, sizeof(RGBQUAD*)*other.height_);
+	}
+
+	/**
+	 * \brief Конструктор перемещения
+	 * \param other Объект из которого перемещают
+	 */
+	BitmapBuffer(BitmapBuffer&& other) noexcept:BitmapBuffer()
+	{
+		this->Swap(other);
+	}
+
+	/**
+	 * \brief Оператор присвоения
+	 * \param other Значение справа знака оператора
+	 * \return Текущий объект
+	 */
+	BitmapBuffer& operator=(BitmapBuffer other)
+	{
+		this->Swap(other);
+		return *this;
+	}
+
+	/**
+	 * \brief Получить размер
+	 * \return Размер в байтах
+	 */
+	uint32_t GetSize() const{
+		return sizeof(RGBQUAD) * this->width_ * this->height_;
+	}
+
+	/**
+	 * \brief Очистка изображения (заливка одним цветом)
+	 * \param clearColor Цвет заливки
+	 */
+	void Clear(RGBQUAD clearColor){
+		if(this->data_){
+			std::fill_n(this->data_, this->width_ * this->height_, clearColor);
+		}
+	}
+
+	/**
+	 * \brief Получить указатель на массив пикселей
+	 * \return Указатель на массив
+	 */
+	RGBQUAD* GetData() const{
+		return this->data_;
+	}
+
+	/**
+	 * \brief Получить ширину изображения
+	 * \return Ширина
+	 */
+	uint32_t GetWidth() const{
+		return this->width_;
+	}
+
+	/**
+	 * \brief Получить высоту изображения
+	 * \return Высота
+	 */
+	uint32_t GetHeight() const{
+		return this->height_;
+	}
+
+	/**
+	 * \brief Деструктор, освобождает память
+	 */
+	~BitmapBuffer()
+	{
+		delete[] this->data_;
+		delete[] this->pixels;
+	}
+};
+
+/**
  * \brief Оконная процедура (объявление)
  * \param hWnd Хендл окна
  * \param message Идентификатор сообщения
@@ -13,56 +151,37 @@
  */
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-/**
- * \brief Создание буфера кадра (двумерный массив структур RGBQUAD)
- * \param width Ширина буфера кадра
- * \param height Высота буфера кадра
- * \param clearColor Изначальный цвет
- * \return Указатель на массив
- */
-RGBQUAD* CreateFrameBuffer(uint32_t width, uint32_t height, RGBQUAD clearColor = {0,0,0,0});
-
-/**
- * \brief Заполнение буфера изображения каким-то конкретным цветом
- * \param buffer Буфер кадра (указатель на массив)
- * \param pixelCount Кол-во пикселей в буфере
- * \param clearColor Цвет
- */
-void ClearFrame(RGBQUAD * buffer, uint32_t pixelCount, RGBQUAD clearColor = { 0,0,0,0 });
 
 /**
  * \brief Установка пикселя
- * \param buffer Буфер кадра (указатель на массив)
+ * \param buffer Буфер кадра (указатель объект)
  * \param x Положение по оси X
  * \param y Положение по ост Y
- * \param w Ширина фрейм-буфера
  * \param color Очистка цвета
  */
-void SetPoint(RGBQUAD * buffer, int x, int y, uint32_t w, RGBQUAD color = { 0,0,0,0 });
+void SetPoint(BitmapBuffer * buffer, int x, int y, RGBQUAD color = { 0,0,0,0 });
 
 /**
  * \brief Рисование линии (быстрый вариант, алгоритм Брэзенхема)
- * \param buffer Буфер кадра (указатель на массив)
+ * \param buffer Буфер кадра (указатель объект)
  * \param x0 Начальная точка (компонента X)
  * \param y0 Начальная точка (компонента Y)
  * \param x1 Конечная точка (компонента X)
  * \param y1 Конечная точка (компонента Y)
- * \param w Ширина фрейм-буфера 
  * \param color Очистка цвета
  */
-void SetLine(RGBQUAD * buffer, int x0, int y0, int x1, int y1, uint32_t w, RGBQUAD color = { 0,0,0,0 });
+void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD color = { 0,0,0,0 });
 
 /**
  * \brief Рисование линии (медленный вариант, с использованием чисел с плавающей точкой)
- * \param buffer Буфер кадра (указатель на массив)
+ * \param buffer Буфер кадра (указатель объект)
  * \param x0 Начальная точка (компонента X)
  * \param y0 Начальная точка (компонента Y)
  * \param x1 Конечная точка (компонента X)
  * \param y1 Конечная точка (компонента Y)
- * \param w Ширина фрейм-буфера
  * \param color Очистка цвета
  */
-void SetLineSlow(RGBQUAD * buffer, int x0, int y0, int x1, int y1, uint32_t w, RGBQUAD color = { 0,0,0,0 });
+void SetLineSlow(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD color = { 0,0,0,0 });
 
 /**
  * \brief Отрисовка кадра
@@ -73,12 +192,12 @@ void SetLineSlow(RGBQUAD * buffer, int x0, int y0, int x1, int y1, uint32_t w, R
  */
 void PresentFrame(uint32_t width, uint32_t height, void* pixels, HWND hWnd);
 
-// Размеры кадра и указатель на массив структур RGBQUAD (буфер кадра)
-uint32_t frameWidth, frameHeight;
-RGBQUAD* frameBuffer;
 
 // Время последнего кадра
 std::chrono::time_point<std::chrono::high_resolution_clock> lastFrameTime;
+
+// Буфер кадра
+BitmapBuffer frameBuffer;
 
 /**
  * \brief Точка входа
@@ -136,27 +255,22 @@ int main(int argc, char* argv[])
 		// Получить размеры клиентской области окна
 		RECT clientRect;
 		GetClientRect(mainWindow, &clientRect);
-		frameWidth = clientRect.right;
-		frameHeight = clientRect.bottom;
-		std::cout << "INFO: Client area sizes : " << frameWidth << "x" << frameHeight << std::endl;
+		std::cout << "INFO: Client area sizes : " << clientRect.right << "x" << clientRect.bottom << std::endl;
 		
 		// Создать буфер кадра по размерам клиенсткой области
-		frameBuffer = CreateFrameBuffer(frameWidth, frameHeight);
-		std::cout << "INFO: Frame-buffer initialized  (size : " << (sizeof(RGBQUAD) * frameWidth * frameHeight) << " bytes)" << std::endl;
+		frameBuffer = BitmapBuffer(clientRect.right, clientRect.bottom);
+		std::cout << "INFO: Frame-buffer initialized  (size : " << frameBuffer.GetSize() << " bytes)" << std::endl;
 
 		// Оконное сообщение (пустая структура)
 		MSG msg = {};
 
-		// Линия
-		struct {
-			float speedX0 = 0.00000001f;
-			float speedX1 = -0.00000001f;
-			int x0 = 0, y0 = 0;
-			int x1 = frameWidth, y1 = frameHeight;
-		} line1;
-
-		// Рисование линии
-		SetLineSlow(frameBuffer, line1.x0, line1.y0, line1.x1, line1.y1, frameWidth, { 0,255,0,0 });
+		// Параметры положения точек линии и скорость
+		int x0, x1, y0, y1;
+		int movementSpeed = 1;
+		x0 = static_cast<uint32_t>(static_cast<float>(frameBuffer.GetWidth()) / 2);
+		y0 = 0;
+		x1 = 0;
+		y1 = frameBuffer.GetHeight();
 
 		// Вечный цикл (работает пока не пришло сообщение WM_QUIT)
 		while (true)
@@ -184,38 +298,31 @@ int main(int argc, char* argv[])
 				// Перевести в миллисекунды
 				float deltaMs = static_cast<float>(delta) / 1000.0f;
 
-				// Изменить положение начальной и конечной точки линии с учетом скорости
-				line1.x0 += static_cast<int>(line1.speedX0 * deltaMs);
-				line1.x1 += static_cast<int>(line1.speedX1 * deltaMs);
+				//TODO: Разобраться с приращением. 
+				//TODO: Во время каста в int, при маленьком deltaMs и маленькой сокрости, приращение часто равно нулю за кадр
+				//TODO: При текущем подходе приращение за кадр не может быть менее пиксела, нужен другой принцип (координаты во float, например)
 
-				// Если положение точек будет оказываться за пределами, установить положение
-				// равное пределу и изменить направление движения (скорость)
-				if(line1.x0 > static_cast<int>(frameWidth)){
-					line1.x0 = frameWidth;
-					line1.speedX0 *= -1;
+				// Сменять положение точки X1 учитывая скорость и время прошедшее с прошлого кадра
+				x1 += static_cast<int>(deltaMs * movementSpeed * 1.0f);
+
+				if(x1 <= 0){
+					x1 = 0;
+					movementSpeed *= -1;
 				}
-
-				if (line1.x0 < 0){
-					line1.x0 = 0;
-					line1.speedX0 *= -1;
-				}
-
-				if (line1.x1 > static_cast<int>(frameWidth)) {
-					line1.x1 = frameWidth;
-					line1.speedX1 *= -1;
-				}
-
-				if (line1.x1 < 0) {
-					line1.x1 = 0;
-					line1.speedX1 *= -1;
+				else if(x1 > static_cast<int>(frameBuffer.GetWidth())){
+					x1 = frameBuffer.GetWidth();
+					movementSpeed *= -1;
 				}
 
 				// Очистить кадр и нарисовать линию
-				ClearFrame(frameBuffer, frameWidth*frameHeight, { 0,0,0,0 });
-				SetLineSlow(frameBuffer, line1.x0, line1.y0, line1.x1, line1.y1, frameWidth, { 0,255,0,0 });
+				frameBuffer.Clear({ 0,0,0,0 });
+				SetLineSlow(&frameBuffer, x0, y0, x1, y1, { 0,255,0,0 });
 
-				// Сообщение "перерисовать"
+				// Сообщение "перерисовать", чтобы показать обновленный кадр
 				SendMessage(mainWindow, WM_PAINT, NULL, NULL);
+
+				// Обновить "время последнего кадра"
+				lastFrameTime = currentFrameTime;
 			}
 		}
 	}
@@ -240,7 +347,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	switch (message)
 	{
 	case WM_PAINT:
-		PresentFrame(frameWidth, frameHeight, frameBuffer, hWnd);
+		PresentFrame(frameBuffer.GetWidth(), frameBuffer.GetHeight(), frameBuffer.GetData(), hWnd);
 		return DefWindowProc(hWnd, message, wParam, lParam);
 
 	case WM_DESTROY:
@@ -254,71 +361,45 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-/**
-* \brief Создание буфера кадра (двумерный массив структур RGBQUAD)
-* \param width Ширина буфера кадра
-* \param height Высота буфера кадра
-* \param clearColor Изначальный цвет
-* \return Указатель на массив
-*/
-RGBQUAD* CreateFrameBuffer(uint32_t width, uint32_t height, RGBQUAD clearColor)
-{
-	
-	RGBQUAD * frame = new RGBQUAD[width * height];
-	ClearFrame(frame, width * height, clearColor);
-	return frame;
-}
-
-/**
-* \brief Заполнение буфера изображения каким-то конкретным цветом
-* \param buffer Буфер кадра (указатель на массив)
-* \param pixelCount Кол-во пикселей в буфере
-* \param clearColor Цвет
-*/
-void ClearFrame(RGBQUAD* buffer, uint32_t pixelCount, RGBQUAD clearColor)
-{
-	std::fill_n(buffer, pixelCount, clearColor);
-}
 
 /**
 * \brief Установка пикселя
-* \param buffer Буфер кадра (указатель на массив)
+* \param buffer Буфер кадра (указатель объект)
 * \param x Положение по оси X
 * \param y Положение по ост Y
-* \param w Ширина фрейм-буфера
 * \param color Очистка цвета
 */
-void SetPoint(RGBQUAD* buffer, int x, int y, uint32_t w, RGBQUAD color)
+void SetPoint(BitmapBuffer * buffer, int x, int y, RGBQUAD color)
 {
-	buffer[(y * w) + x] = color;
+	if(y <= static_cast<int>(buffer->GetHeight()) && y >= 0 && x <= static_cast<int>(buffer->GetWidth()) && x >=0){
+		buffer->pixels[y][x] = color;
+	}
 }
 
 /**
 * \brief Рисование линии (быстрый вариант, алгоритм Брэзенхема)
-* \param buffer Буфер кадра (указатель на массив)
+* \param buffer Буфер кадра (указатель объект)
 * \param x0 Начальная точка (компонента X)
 * \param y0 Начальная точка (компонента Y)
 * \param x1 Конечная точка (компонента X)
 * \param y1 Конечная точка (компонента Y)
-* \param w Ширина фрейм-буфера
 * \param color Очистка цвета
 */
-void SetLine(RGBQUAD* buffer, int x0, int y0, int x1, int y1, uint32_t w, RGBQUAD color)
+void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD color)
 {
 	//TODO: имплементация алгоритма Брэзенхема
 }
 
 /**
 * \brief Рисование линии (медленный вариант, с использованием чисел с плавающей точкой)
-* \param buffer Буфер кадра (указатель на массив)
+* \param buffer Буфер кадра (указатель объект)
 * \param x0 Начальная точка (компонента X)
 * \param y0 Начальная точка (компонента Y)
 * \param x1 Конечная точка (компонента X)
 * \param y1 Конечная точка (компонента Y)
-* \param w Ширина фрейм-буфера
 * \param color Очистка цвета
 */
-void SetLineSlow(RGBQUAD* buffer, int x0, int y0, int x1, int y1, uint32_t w, RGBQUAD color)
+void SetLineSlow(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD color)
 {
 	int const deltaX = x1 - x0;
 	int const deltaY = y1 - y0;
@@ -330,7 +411,7 @@ void SetLineSlow(RGBQUAD* buffer, int x0, int y0, int x1, int y1, uint32_t w, RG
 		{
 			int x = i + x0;
 			int y = static_cast<int>(i * k) + y0;
-			SetPoint(buffer, x, y, w, color);
+			SetPoint(buffer, x, y, color);
 		}
 	}
 	else
@@ -340,7 +421,7 @@ void SetLineSlow(RGBQUAD* buffer, int x0, int y0, int x1, int y1, uint32_t w, RG
 		{
 			int x = static_cast<int>(i * k) + x0;
 			int y = i + y0;
-			SetPoint(buffer, x, y, w, color);
+			SetPoint(buffer, x, y, color);
 		}
 	}
 }
