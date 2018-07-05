@@ -1,145 +1,8 @@
 ﻿#include <iostream>
 #include <Windows.h>
-#include <algorithm>
 #include <chrono>
 
-/**
- * \brief Класс для работы с bitmap изображением
- */
-class BitmapBuffer
-{
-private:
-	uint32_t width_;   // Ширина изображения
-	uint32_t height_;  // Высота изображения
-	RGBQUAD* data_;    // Данные о цветах пикселей (цвет одно пикселя описывает 4-байтная структура RGBQUAD)
-
-	/**
-	 * \brief Обменять значения полей текущего объекта с другим
-	 * \param other Другой объект
-	 */
-	void Swap(BitmapBuffer& other)
-	{
-		std::swap(this->width_, other.width_);
-		std::swap(this->height_, other.height_);
-		std::swap(this->data_, other.data_);
-		std::swap(this->pixels, other.pixels);
-	}
-
-public:
-	RGBQUAD** pixels;  // Массив указателей на массивы (доступ к данным как к 2-мерному массиву)
-
-	/**
-	 * \brief Конструктор по умолчанию
-	 * \details Не выделяет память, присваивает указателям nullptr
-	 */
-	BitmapBuffer() :width_(0), height_(0), data_(nullptr), pixels(nullptr) {}
-
-	/**
-	 * \brief Конструктор, инициализирует bitmap заполняя его цветом
-	 * \param width Ширина
-	 * \param height Высота
-	 * \param clearColor Цвет по умолчанию
-	 */
-	BitmapBuffer(const uint32_t width, const uint32_t height, RGBQUAD clearColor = { 0,0,0,0 }) :
-		width_(width),
-		height_(height),
-		data_(nullptr),
-		pixels(nullptr)
-	{
-		this->data_ = new RGBQUAD[this->width_ * this->height_];
-		this->pixels = new RGBQUAD*[this->height_];
-		std::fill_n(this->data_, this->width_ * this->height_, clearColor);
-
-		for (uint32_t i = 0; i < this->height_; i++) {
-			this->pixels[i] = this->data_ + this->width_ * i;
-		}
-	}
-
-	/**
-	 * \brief Конструктор копирования, копирует данные пикселей при присваивании объекта
-	 * \param other Объект из которого копируют
-	 */
-	BitmapBuffer(const BitmapBuffer& other) :
-		width_(other.width_),
-		height_(other.height_),
-		data_(other.data_ ? new RGBQUAD[other.width_ * other.height_] : nullptr),
-		pixels(other.pixels ? new RGBQUAD*[other.height_] : nullptr)
-	{
-		memcpy(this->data_, other.data_, other.GetSize());
-		memcpy(this->pixels, other.pixels, sizeof(RGBQUAD*)*other.height_);
-	}
-
-	/**
-	 * \brief Конструктор перемещения
-	 * \param other Объект из которого перемещают
-	 */
-	BitmapBuffer(BitmapBuffer&& other) noexcept:BitmapBuffer()
-	{
-		this->Swap(other);
-	}
-
-	/**
-	 * \brief Оператор присвоения
-	 * \param other Значение справа знака оператора
-	 * \return Текущий объект
-	 */
-	BitmapBuffer& operator=(BitmapBuffer other)
-	{
-		this->Swap(other);
-		return *this;
-	}
-
-	/**
-	 * \brief Получить размер
-	 * \return Размер в байтах
-	 */
-	uint32_t GetSize() const{
-		return sizeof(RGBQUAD) * this->width_ * this->height_;
-	}
-
-	/**
-	 * \brief Очистка изображения (заливка одним цветом)
-	 * \param clearColor Цвет заливки
-	 */
-	void Clear(RGBQUAD clearColor){
-		if(this->data_){
-			std::fill_n(this->data_, this->width_ * this->height_, clearColor);
-		}
-	}
-
-	/**
-	 * \brief Получить указатель на массив пикселей
-	 * \return Указатель на массив
-	 */
-	RGBQUAD* GetData() const{
-		return this->data_;
-	}
-
-	/**
-	 * \brief Получить ширину изображения
-	 * \return Ширина
-	 */
-	uint32_t GetWidth() const{
-		return this->width_;
-	}
-
-	/**
-	 * \brief Получить высоту изображения
-	 * \return Высота
-	 */
-	uint32_t GetHeight() const{
-		return this->height_;
-	}
-
-	/**
-	 * \brief Деструктор, освобождает память
-	 */
-	~BitmapBuffer()
-	{
-		delete[] this->data_;
-		delete[] this->pixels;
-	}
-};
+#include "BitmapBuffer.h"
 
 /**
  * \brief Оконная процедура (объявление)
@@ -151,7 +14,6 @@ public:
  */
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-
 /**
  * \brief Установка пикселя
  * \param buffer Буфер кадра (указатель объект)
@@ -159,7 +21,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
  * \param y Положение по ост Y
  * \param color Очистка цвета
  */
-void SetPoint(BitmapBuffer * buffer, int x, int y, RGBQUAD color = { 0,0,0,0 });
+void SetPoint(BitmapBuffer * buffer, int x, int y, BitmapRGB color = { 0,0,0 });
 
 /**
  * \brief Рисование линии (быстрый вариант, алгоритм Брэзенхема)
@@ -170,7 +32,7 @@ void SetPoint(BitmapBuffer * buffer, int x, int y, RGBQUAD color = { 0,0,0,0 });
  * \param y1 Конечная точка (компонента Y)
  * \param color Очистка цвета
  */
-void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD color = { 0,0,0,0 });
+void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color = { 0,0,0 });
 
 /**
  * \brief Рисование линии (медленный вариант, с использованием чисел с плавающей точкой)
@@ -181,7 +43,7 @@ void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD colo
  * \param y1 Конечная точка (компонента Y)
  * \param color Очистка цвета
  */
-void SetLineSlow(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD color = { 0,0,0,0 });
+void SetLineSlow(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color = { 0,0,0 });
 
 /**
  * \brief Отрисовка кадра
@@ -315,8 +177,8 @@ int main(int argc, char* argv[])
 				}
 
 				// Очистить кадр и нарисовать линию
-				frameBuffer.Clear({ 0,0,0,0 });
-				SetLineSlow(&frameBuffer, x0, y0, x1, y1, { 0,255,0,0 });
+				frameBuffer.Clear({ 0,0,0 });
+				SetLineSlow(&frameBuffer, x0, y0, x1, y1, { 0,255,0 });
 
 				// Сообщение "перерисовать", чтобы показать обновленный кадр
 				SendMessage(mainWindow, WM_PAINT, NULL, NULL);
@@ -361,7 +223,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-
 /**
 * \brief Установка пикселя
 * \param buffer Буфер кадра (указатель объект)
@@ -369,10 +230,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 * \param y Положение по ост Y
 * \param color Очистка цвета
 */
-void SetPoint(BitmapBuffer * buffer, int x, int y, RGBQUAD color)
+void SetPoint(BitmapBuffer * buffer, int x, int y, BitmapRGB color)
 {
-	if(y <= static_cast<int>(buffer->GetHeight()) && y >= 0 && x <= static_cast<int>(buffer->GetWidth()) && x >=0){
-		buffer->pixels[y][x] = color;
+	if(y <= static_cast<int>(buffer->GetHeight()) && 
+		y >= 0 && x <= static_cast<int>(buffer->GetWidth()) && x >=0)
+	{
+		(*buffer)[y][x].red = color.red;
+		(*buffer)[y][x].green = color.green;
+		(*buffer)[y][x].blue = color.blue;
 	}
 }
 
@@ -385,7 +250,7 @@ void SetPoint(BitmapBuffer * buffer, int x, int y, RGBQUAD color)
 * \param y1 Конечная точка (компонента Y)
 * \param color Очистка цвета
 */
-void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD color)
+void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color)
 {
 	//TODO: имплементация алгоритма Брэзенхема
 }
@@ -399,7 +264,7 @@ void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD colo
 * \param y1 Конечная точка (компонента Y)
 * \param color Очистка цвета
 */
-void SetLineSlow(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, RGBQUAD color)
+void SetLineSlow(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color)
 {
 	int const deltaX = x1 - x0;
 	int const deltaY = y1 - y0;
