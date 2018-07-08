@@ -57,6 +57,16 @@ void SetLinePreBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, 
 void SetLineBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color = { 0,0,0 });
 
 /**
+ * \brief Рисование квадрата
+ * \param buffer Буфер кадра (указатель объект)
+ * \param x Положение левого верхнего угла по оси X
+ * \param y Положение левого верхнего угла по оси Y
+ * \param size Размер стороны
+ * \param color Цвет
+ */
+void SetSquare(BitmapBuffer * buffer, int x, int y, int size, BitmapRGB color = { 0,0,0 });
+
+/**
 * \brief Отрисовка кадра
 * \param width Ширина
 * \param height Высота
@@ -67,6 +77,9 @@ void PresentFrame(uint32_t width, uint32_t height, void* pixels, HWND hWnd);
 
 // Буфер кадра
 BitmapBuffer frameBuffer;
+
+// Время последнего кадра
+std::chrono::time_point<std::chrono::high_resolution_clock> lastFrameTime;
 
 /**
 * \brief Точка входа
@@ -130,12 +143,24 @@ int main(int argc, char* argv[])
 		frameBuffer = BitmapBuffer(clientRect.right, clientRect.bottom);
 		std::cout << "INFO: Frame-buffer initialized  (size : " << frameBuffer.GetSize() << " bytes)" << std::endl;
 
-		//Линия с левого верхнего угла в правый нижний
-		SetLine(&frameBuffer, 0, 0, frameBuffer.GetWidth()-1, frameBuffer.GetHeight()-1, { 0,255,0 });
-		//Линия с левого нижнего угла в правый верхний
-		SetLinePreBresenham(&frameBuffer, 0, frameBuffer.GetHeight() - 1, frameBuffer.GetWidth() - 1, 0, { 0,255,0 });
-		//Линия с справа на лево по центру высоты кадра
-		SetLineBresenham(&frameBuffer, 0, static_cast<int>(frameBuffer.GetHeight()/2), frameBuffer.GetWidth() - 1, static_cast<int>(frameBuffer.GetHeight()/2), { 0,255,0 });
+		// Параметры положения/скорости квадрата
+		struct
+		{
+			//Положение квадрата
+			float posX = 10.0f;
+			float posY = 10.0f;
+
+			//Множитель скорости
+			const float speedMul = 0.3f;
+
+			//Вектор скорости (направление)
+			float speedX = 1;
+			float speedY = 1;
+
+			//Размер стороны квадрата
+			float size = 100.0f;
+		} squareSettings;
+
 
 		// Оконное сообщение (пустая структура)
 		MSG msg = {};
@@ -152,6 +177,74 @@ int main(int argc, char* argv[])
 					break;
 				}
 			}
+
+			// Если хендл окна не пуст
+			if (mainWindow)
+			{
+				// Время текущего кадра (текущей итерации)
+				const std::chrono::time_point<std::chrono::high_resolution_clock> currentFrameTime = std::chrono::high_resolution_clock::now();
+
+				// Сколько микросекунд прошло с последней итерации
+				// 1 миллисекунда = 1000 микросекунд = 1000000 наносекунд
+				const int64_t delta = std::chrono::duration_cast<std::chrono::microseconds>(currentFrameTime - lastFrameTime).count();
+
+				// Перевести в миллисекунды
+				float deltaMs = static_cast<float>(delta) / 1000.0f;
+
+				// Приращение к положению (с учетом скорости и времени прошедшего с прошлого кадра)
+				// Во избежании резкого рывка при старте дельта времени ограничивается максимальным значением 5 миллисекунд
+				if(deltaMs <= 5.0f)
+				{
+					squareSettings.posX += deltaMs * squareSettings.speedX * squareSettings.speedMul;
+					squareSettings.posY += deltaMs * squareSettings.speedY * squareSettings.speedMul;
+				}
+
+
+				// Если столкнулось с левой стеной - развернуть
+				if(squareSettings.posX <= 0){
+					squareSettings.posX = 0;
+					squareSettings.speedX *= -1;
+				}
+
+				// Если столкнулось с верхом - развернуть
+				if(squareSettings.posY <= 0){
+					squareSettings.posY = 0;
+					squareSettings.speedY *= -1;
+				}
+
+				// Если столкнулось с правой стеной - развернуть
+				if ((squareSettings.posX + squareSettings.size) >= frameBuffer.GetWidth() - 1)
+				{
+					squareSettings.posX = frameBuffer.GetWidth() - squareSettings.size - 1;
+					squareSettings.speedX *= -1;
+				}
+
+				// Если столкнулось с низом - развернуть
+				if ((squareSettings.posY + squareSettings.size) >= frameBuffer.GetHeight() - 1)
+				{
+					squareSettings.posY = frameBuffer.GetHeight() - squareSettings.size - 1;
+					squareSettings.speedY *= -1;
+				}
+
+				// Очистить кадр 
+				frameBuffer.Clear({ 0,0,0 });
+
+				// Нарисовать квадрат
+				SetSquare(
+					&frameBuffer,
+					static_cast<int>(squareSettings.posX), 
+					static_cast<int>(squareSettings.posY), 
+					static_cast<int>(squareSettings.size), 
+					{ 0,255,0 });
+
+
+				// Сообщение "перерисовать", чтобы показать обновленный кадр
+				SendMessage(mainWindow, WM_PAINT, NULL, NULL);
+
+				// Обновить "время последнего кадра"
+				lastFrameTime = currentFrameTime;
+			}
+
 		}
 	}
 	catch (std::exception const &ex)
@@ -345,6 +438,22 @@ void SetLineBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, Bit
 			}
 		}
 	}
+}
+
+/**
+* \brief Рисование квадрата
+* \param buffer Буфер кадра (указатель объект)
+* \param x Положение левого верхнего угла по оси X
+* \param y Положение левого верхнего угла по оси Y
+* \param size Размер стороны
+* \param color Цвет
+*/
+void SetSquare(BitmapBuffer* buffer, int x, int y, int size, BitmapRGB color)
+{
+	SetLineBresenham(buffer, x, y, x + size - 1, y, color);
+	SetLineBresenham(buffer, x, y, x, y + size - 1, color);
+	SetLineBresenham(buffer, x + (size - 1), y, x + (size - 1), y + (size - 1), color);
+	SetLineBresenham(buffer, x, y + (size - 1), x + (size - 1), y + (size - 1), color);
 }
 
 /**
