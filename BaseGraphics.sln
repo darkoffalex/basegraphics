@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bresenham", "Bresenham\Bres
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BresenhamAnimated", "BresenhamAnimated\BresenhamAnimated.vcxproj", "{AFA32879-F17A-4ADF-90C0-FA17568EFDD6}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Framebuffer", "Framebuffer\Framebuffer.vcxproj", "{2663DD46-CDD0-44FF-9000-D848A937CF78}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -31,6 +33,14 @@ Global
 		{AFA32879-F17A-4ADF-90C0-FA17568EFDD6}.Release|x64.Build.0 = Release|x64
 		{AFA32879-F17A-4ADF-90C0-FA17568EFDD6}.Release|x86.ActiveCfg = Release|Win32
 		{AFA32879-F17A-4ADF-90C0-FA17568EFDD6}.Release|x86.Build.0 = Release|Win32
+		{2663DD46-CDD0-44FF-9000-D848A937CF78}.Debug|x64.ActiveCfg = Debug|x64
+		{2663DD46-CDD0-44FF-9000-D848A937CF78}.Debug|x64.Build.0 = Debug|x64
+		{2663DD46-CDD0-44FF-9000-D848A937CF78}.Debug|x86.ActiveCfg = Debug|Win32
+		{2663DD46-CDD0-44FF-9000-D848A937CF78}.Debug|x86.Build.0 = Debug|Win32
+		{2663DD46-CDD0-44FF-9000-D848A937CF78}.Release|x64.ActiveCfg = Release|x64
+		{2663DD46-CDD0-44FF-9000-D848A937CF78}.Release|x64.Build.0 = Release|x64
+		{2663DD46-CDD0-44FF-9000-D848A937CF78}.Release|x86.ActiveCfg = Release|Win32
+		{2663DD46-CDD0-44FF-9000-D848A937CF78}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
