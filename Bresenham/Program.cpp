@@ -270,7 +270,7 @@ void SetLinePreBresenham(BitmapBuffer* buffer, int x0, int y0, int x1, int y1, B
 			SetPoint(buffer, x, y, color);
 			accretion += static_cast<float>(absDeltaY) / static_cast<float>(absDeltaX);
 
-			if (accretion >= 0.5f)
+			if (accretion >= 1.0f)
 			{
 				accretion -= 1.0f;
 				y += direction;
@@ -286,7 +286,7 @@ void SetLinePreBresenham(BitmapBuffer* buffer, int x0, int y0, int x1, int y1, B
 			SetPoint(buffer, x, y, color);
 			accretion += static_cast<float>(absDeltaX) / static_cast<float>(absDeltaY);
 
-			if (accretion >= 0.5f)
+			if (accretion >= 1.0f)
 			{
 				accretion -= 1.0f;
 				x += direction;
@@ -322,7 +322,7 @@ void SetLineBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, Bit
 			SetPoint(buffer, x, y, color);
 			accretion += absDeltaY;
 
-			if (2 * accretion >= absDeltaY)
+			if (accretion >= absDeltaX)
 			{
 				accretion -= absDeltaX;
 				y += direction;
@@ -338,7 +338,7 @@ void SetLineBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, Bit
 			SetPoint(buffer, x, y, color);
 			accretion += absDeltaX;
 
-			if (2 * accretion >= absDeltaY)
+			if (accretion >= absDeltaY)
 			{
 				accretion -= absDeltaY;
 				x += direction;
