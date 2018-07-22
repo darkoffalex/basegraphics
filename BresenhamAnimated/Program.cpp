@@ -19,7 +19,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 * \param buffer Буфер кадра (указатель объект)
 * \param x Положение по оси X
 * \param y Положение по ост Y
-* \param color Цвет очистки
+* \param color Цвет
 */
 void SetPoint(BitmapBuffer * buffer, int x, int y, BitmapRGB color = { 0,0,0 });
 
@@ -30,7 +30,7 @@ void SetPoint(BitmapBuffer * buffer, int x, int y, BitmapRGB color = { 0,0,0 });
 * \param y0 Начальная точка (компонента Y)
 * \param x1 Конечная точка (компонента X)
 * \param y1 Конечная точка (компонента Y)
-* \param color Цвет очистки
+* \param color Цвет
 */
 void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color = { 0,0,0 });
 
@@ -41,7 +41,7 @@ void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB co
 * \param y0 Начальная точка (компонента Y)
 * \param x1 Конечная точка (компонента X)
 * \param y1 Конечная точка (компонента Y)
-* \param color Цвет очистки
+* \param color Цвет
 */
 void SetLinePreBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color = { 0,0,0 });
 
@@ -52,7 +52,7 @@ void SetLinePreBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, 
 * \param y0 Начальная точка (компонента Y)
 * \param x1 Конечная точка (компонента X)
 * \param y1 Конечная точка (компонента Y)
-* \param color Цвет очистки
+* \param color Цвет
 */
 void SetLineBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color = { 0,0,0 });
 
@@ -287,7 +287,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 * \param buffer Буфер кадра (указатель объект)
 * \param x Положение по оси X
 * \param y Положение по ост Y
-* \param color Цвет очистки
+* \param color Цвет
 */
 void SetPoint(BitmapBuffer * buffer, int x, int y, BitmapRGB color)
 {
@@ -307,7 +307,7 @@ void SetPoint(BitmapBuffer * buffer, int x, int y, BitmapRGB color)
 * \param y0 Начальная точка (компонента Y)
 * \param x1 Конечная точка (компонента X)
 * \param y1 Конечная точка (компонента Y)
-* \param color Цвет очистки
+* \param color Цвет
 */
 void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color)
 {
@@ -343,7 +343,7 @@ void SetLine(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB co
 * \param y0 Начальная точка (компонента Y)
 * \param x1 Конечная точка (компонента X)
 * \param y1 Конечная точка (компонента Y)
-* \param color Цвет очистки
+* \param color Цвет
 */
 void SetLinePreBresenham(BitmapBuffer* buffer, int x0, int y0, int x1, int y1, BitmapRGB color)
 {
@@ -363,7 +363,9 @@ void SetLinePreBresenham(BitmapBuffer* buffer, int x0, int y0, int x1, int y1, B
 			SetPoint(buffer, x, y, color);
 			accretion += static_cast<float>(absDeltaY) / static_cast<float>(absDeltaX);
 
-			if (accretion >= 1.0f)
+			// Для большей точности будем засчитывать шаг по вертикали если сумма дeльт
+			// за пройденные шаги превзошла половину пиксела (центр приксела берем как 0,5 его ширины и высоты)
+			if (accretion >= 0.5f)
 			{
 				accretion -= 1.0f;
 				y += direction;
@@ -379,7 +381,9 @@ void SetLinePreBresenham(BitmapBuffer* buffer, int x0, int y0, int x1, int y1, B
 			SetPoint(buffer, x, y, color);
 			accretion += static_cast<float>(absDeltaX) / static_cast<float>(absDeltaY);
 
-			if (accretion >= 1.0f)
+			// Для большей точности будем засчитывать шаг по вертикали если сумма дeльт
+			// за пройденные шаги превзошла половину пиксела (центр приксела берем как 0,5 его ширины и высоты)
+			if (accretion >= 0.5f)
 			{
 				accretion -= 1.0f;
 				x += direction;
@@ -395,7 +399,7 @@ void SetLinePreBresenham(BitmapBuffer* buffer, int x0, int y0, int x1, int y1, B
 * \param y0 Начальная точка (компонента Y)
 * \param x1 Конечная точка (компонента X)
 * \param y1 Конечная точка (компонента Y)
-* \param color Цвет очистки
+* \param color Цвет
 */
 void SetLineBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, BitmapRGB color)
 {
@@ -415,7 +419,8 @@ void SetLineBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, Bit
 			SetPoint(buffer, x, y, color);
 			accretion += absDeltaY;
 
-			if (accretion >= absDeltaX)
+			// Умножение на 2 для большей точности (см. предшествующий алгоритм)
+			if (accretion * 2 >= absDeltaX)
 			{
 				accretion -= absDeltaX;
 				y += direction;
@@ -431,7 +436,8 @@ void SetLineBresenham(BitmapBuffer * buffer, int x0, int y0, int x1, int y1, Bit
 			SetPoint(buffer, x, y, color);
 			accretion += absDeltaX;
 
-			if (accretion >= absDeltaY)
+			// Умножение на 2 для большей точности (см. предшествующий алгоритм)
+			if (accretion * 2 >= absDeltaY)
 			{
 				accretion -= absDeltaY;
 				x += direction;
