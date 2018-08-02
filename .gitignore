@@ -1,4 +1,5 @@
 Bin/
+Intermediates/
 ipch/
 .vs/
 *.opendb

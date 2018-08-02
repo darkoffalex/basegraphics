@@ -3,7 +3,6 @@
 
 #include "../Base/Gfx.h"
 #include "../Base/TextureBuffer.h"
-#include "../Base/VertexBuffer.h"
 
 /**
 * \brief Оконная процедура (объявление)
@@ -15,26 +14,15 @@
 */
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-/**
- * \brief Рисование "сеточной" модели
- * \param image Буфер изображения
- * \param model Буфер вершин
- * \param color Цвет
- */
-void DrawWireModel(gfx::TextureBuffer* image, gfx::VertexBuffer* model, gfx::ColorBGR color = {0,255,0,0});
-
 // Буфер кадра
 gfx::TextureBuffer frameBuffer;
 
-// Буффер вершин
-gfx::VertexBuffer vertexBuffer;
-
 /**
-* \brief Точка входа
-* \param argc Кол-во аргументов
-* \param argv Агрументы (строки)
-* \return Код выхода
-*/
+ * \brief Точка входа
+ * \param argc Кол-во аргументов
+ * \param argv Агрументы (строки)
+ * \return Код выхода
+ */
 int main(int argc, char* argv[])
 {
 	try
@@ -65,7 +53,7 @@ int main(int argc, char* argv[])
 		// Создание окна
 		HWND mainWindow = CreateWindow(
 			classInfo.lpszClassName,
-			L"WireRenderer",
+			L"Points",
 			WS_OVERLAPPEDWINDOW,
 			0, 0,
 			800, 600,
@@ -88,15 +76,13 @@ int main(int argc, char* argv[])
 		std::cout << "INFO: Client area sizes : " << clientRect.right << "x" << clientRect.bottom << std::endl;
 
 		// Создать буфер кадра по размерам клиенсткой области
-		frameBuffer = gfx::TextureBuffer(clientRect.right, clientRect.bottom);
+		frameBuffer =  gfx::TextureBuffer(clientRect.right, clientRect.bottom);
 		std::cout << "INFO: Frame-buffer initialized  (size : " << frameBuffer.GetSize() << " bytes)" << std::endl;
 
-		// Загрузить вершины в буфер вершин из файла
-		vertexBuffer.LoadFromFile("models/african_head.obj");
-		std::cout << "INFO: Vertex-buffer initialized (size: " << vertexBuffer.GetSize() << " bytes, " << vertexBuffer.GetVertices().size() << " model, " << vertexBuffer.GetFaces().size() << " faces)" << std::endl;
-
-		// Построить изображение модели
-		DrawWireModel(&frameBuffer, &vertexBuffer, {0,0,255,0});
+		// Установить точку примерно по центру изображения
+		unsigned int x = (frameBuffer.GetWidth() - 1) / 2;
+		unsigned int y = (frameBuffer.GetHeight() - 1) / 2;
+		gfx::SetPointSafe(&frameBuffer, x, y, { 0,255,0,0 });
 
 		// Оконное сообщение (пустая структура)
 		MSG msg = {};
@@ -156,40 +142,4 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 
 	return 0;
-}
-
-/**
-* \brief Рисование "сеточной" модели
-* \param image Буфер изображения
-* \param model Буфер вершин
-* \param color Цвет
-*/
-void DrawWireModel(gfx::TextureBuffer* image, gfx::VertexBuffer* model, gfx::ColorBGR color)
-{
-	// Проход по всем полигонам модели (полигон - массив индексов вершин, обычно 3 индекса)
-	for (unsigned int i = 0; i < model->GetFaces().size(); i++)
-	{
-		// Получение индексов текущего полигона
-		std::vector<int> faceIndices = model->GetFaces()[i];
-
-		// Проход по всем точкам полигона (если считать что их 3)
-		for (unsigned int j = 0; j < 3; j++)
-		{
-			// Получаем текущую точку и следующую (следующая может оказаться нулевой, завершающей)
-			gfx::Vector3D<float> v0 = model->GetVertices()[faceIndices[j]];
-			gfx::Vector3D<float> v1 = model->GetVertices()[faceIndices[(j + 1) % 3]];
-
-			// Преобразование однородных координат [-1,1] вершин в оконные координаты [0,ширина]
-			// Используем только 2 ости (X и Y). Ось Z (глубина) не задействуется, в рузультате
-			// получаем что-то вроде изометрической проекции (без перспективного искажения).
-			// Если заменить оси X и Z - получим вид модели с иной стороны
-			int x0 = static_cast<int>((v0.x + 1.0f)*(image->GetWidth() / 2.0f));
-			int y0 = static_cast<int>((v0.y*-1 + 1.0f)*(image->GetHeight() / 2.0f)); //Учитываем инверсию оси Y, умнажаем на -1
-			int x1 = static_cast<int>((v1.x + 1.0f)*(image->GetWidth() / 2.0f));
-			int y1 = static_cast<int>((v1.y*-1 + 1.0f)*(image->GetHeight() / 2.0f)); //Учитываем инверсию оси Y, умнажаем на -1
-
-			// Отрисовка безопасной линии
-			gfx::SetLineSafe(image, { x0, y0 }, { x1, y1 }, color);
-		}
-	}
 }

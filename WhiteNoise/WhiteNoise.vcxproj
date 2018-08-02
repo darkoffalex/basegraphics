@@ -19,9 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{3702913C-6EE3-40D1-82EC-F1FB590A61FF}</ProjectGuid>
+    <ProjectGuid>{84C9C84F-41E2-440F-A688-5D43CA68211B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>WireRenderer</RootNamespace>
+    <RootNamespace>WhiteNoise</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -160,14 +160,11 @@
   <ItemGroup>
     <ClCompile Include="..\Base\Gfx.cpp" />
     <ClCompile Include="..\Base\TextureBuffer.cpp" />
-    <ClCompile Include="..\Base\VertexBuffer.cpp" />
     <ClCompile Include="Program.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Base\Gfx.h" />
-    <ClInclude Include="..\Base\GfxTypes.h" />
     <ClInclude Include="..\Base\TextureBuffer.h" />
-    <ClInclude Include="..\Base\VertexBuffer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
