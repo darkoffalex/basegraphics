@@ -111,5 +111,13 @@ namespace gfx
 		* \return Высота
 		*/
 		unsigned int GetHeight() const;
+
+		/**
+		 * \brief Находится ли точка в пределах допустимой области
+		 * \param x Координата X
+		 * \param y Координата Y
+		 * \return Да или нет
+		 */
+		bool IsPointInBounds(int x, int y) const;
 	};
 }

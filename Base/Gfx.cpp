@@ -23,9 +23,7 @@ namespace gfx
 	*/
 	void SetPointSafe(TextureBuffer* image, int x, int y, ColorBGR color)
 	{
-		if(x <= static_cast<int>(image->GetWidth()-1) && x >= 0 && 
-			y <= static_cast<int>(image->GetHeight()-1) && y >= 0)
-		{
+		if(image->IsPointInBounds(x,y)){
 			SetPoint(image, x, y, color);
 		}
 	}
@@ -208,13 +206,75 @@ namespace gfx
 	*/
 	void SetLineSafe(TextureBuffer* image, Vector2D<int> pointSrc, Vector2D<int> pointDst, ColorBGR color)
 	{
-		if (pointSrc.x <= static_cast<int>(image->GetWidth() - 1) && pointSrc.x >= 0 &&
-			pointSrc.y <= static_cast<int>(image->GetHeight() - 1) && pointSrc.y >= 0 &&
-			pointDst.x <= static_cast<int>(image->GetWidth() - 1) && pointDst.x >= 0 &&
-			pointDst.y <= static_cast<int>(image->GetHeight() - 1) && pointDst.y >= 0)
+		if(image->IsPointInBounds(pointSrc.x,pointSrc.y) && image->IsPointInBounds(pointDst.x,pointDst.y))
 		{
 			SetLine(image, pointSrc, pointDst, color);
 		}
+	}
+
+	/**
+	* \brief Рисование прямоугольника
+	* \param image Буфер изображения
+	* \param box Параметры прямоугольника (2 точки)
+	* \param color Цвет
+	*/
+	void SetRectangle(TextureBuffer* image, Box2D<int> box, ColorBGR color)
+	{
+		SetLine(image, box.topLeft, { box.bottomRight.x, box.topLeft.y }, color, true);
+		SetLine(image, { box.bottomRight.x, box.topLeft.y }, box.bottomRight, color, true);
+		SetLine(image, box.bottomRight, {box.topLeft.x,box.bottomRight.y}, color, true);
+		SetLine(image, { box.topLeft.x,box.bottomRight.y }, box.topLeft, color, true);
+	}
+
+	/**
+	* \brief Рисование треугольника (полигон)
+	* \param image Буфер изображения
+	* \param p0 Точка 1
+	* \param p1 Точка 2
+	* \param p2 Точка 3
+	* \param color Цвет
+	*/
+	void SetPolygon(TextureBuffer * image, Vector2D<int> p0, Vector2D<int> p1, Vector2D<int> p2, ColorBGR color)
+	{
+		if(image->IsPointInBounds(p0.x,p0.y) && image->IsPointInBounds(p1.x,p1.y) && image->IsPointInBounds(p2.x,p2.y))
+		{
+			SetLine(image, p0, p1, color);
+			SetLine(image, p1, p2, color);
+			SetLine(image, p2, p0, color);
+
+			Box2D<int> bbox = FindTriangleBoundingBox2D(p0, p1, p2);
+			for (int y = bbox.topLeft.y; y <= bbox.bottomRight.y; y++)
+			{
+				for (int x = bbox.topLeft.x; x <= bbox.bottomRight.x; x++)
+				{
+					if(IsInTriangle({x,y},p0,p1,p2)){
+						SetPoint(image, x, y, color);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	* \brief Находится ли точка внутри треугольника
+	* \param p Проверяемая точка
+	* \param a Точка треугольника A
+	* \param b Точка треугольника B
+	* \param c Точка треугольника C
+	* \return Да или нет
+	*/
+	bool IsInTriangle(Vector2D<int> p, Vector2D<int> a, Vector2D<int> b, Vector2D<int> c)
+	{
+		// Используем преобразовнное уравнение прямой проходящих по двум точкам - (y-y1)/(y2-y1) = (x-x1)/(x2-x1)
+		// Находим 3 уравнения прямых по двум точкам каждой стороны треугольника, подставляя координаты проверяемой точки
+		// Если точка выше - значение будет выше ноля, если ниже - ниже ноля, если равно - на прямой
+		// Слудет учитывать что уравнение прямой от точки A к B не совсем то же, что от точкии B к А, это своего рода инверсия,
+		// поэтому следует учитывать ориентацию прямых (в каком порядке идут точки), либо делать 2 прверки, для универсальности
+		int aSide = (a.y - b.y)*p.x + (b.x - a.x)*p.y + (a.x*b.y - b.x*a.y);
+		int bSide = (b.y - c.y)*p.x + (c.x - b.x)*p.y + (b.x*c.y - c.x*b.y);
+		int cSide = (c.y - a.y)*p.x + (a.x - c.x)*p.y + (c.x*a.y - a.x*c.y);
+
+		return (aSide >= 0 && bSide >= 0 && cSide >= 0) || (aSide < 0 && bSide < 0 && cSide < 0);
 	}
 
 	/**

@@ -154,4 +154,22 @@ namespace gfx
 	{
 		return this->height_;
 	}
+
+	/**
+	* \brief Находится ли точка в пределах допустимой области
+	* \param x Координата X
+	* \param y Координата Y
+	* \return Да или нет
+	*/
+	bool TextureBuffer::IsPointInBounds(int x, int y) const
+	{
+		if(this->GetSize() == 0){
+			return false;
+		}
+
+		return x <= static_cast<int>(this->GetWidth() - 1) && 
+			x >= 0 && 
+			y <= static_cast<int>(this->GetHeight() - 1) && 
+			y >= 0;
+	}
 }

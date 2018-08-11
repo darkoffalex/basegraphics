@@ -81,4 +81,17 @@ namespace gfx
 			return result;
 		}
 	};
+
+	/**
+	 * \brief Шаблонная структура для описания прямугольной области
+	 * \tparam T Тип используемый в вектрах (int по умолчанию)
+	 */
+	template <typename T = int>
+	struct Box2D
+	{
+		Vector2D<T> topLeft;
+		Vector2D<T> bottomRight;
+
+		Box2D(Vector2D<T> inTopLeft = { 0,0 }, Vector2D<T> inBottomRight = {0,0}) : topLeft(inTopLeft), bottomRight(inBottomRight) {}
+	};
 }
