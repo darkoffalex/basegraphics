@@ -14,30 +14,49 @@ namespace gfx
 		T x;
 		T y;
 
+		// Конструктор структуры
 		Vector2D(T X = 0, T Y = 0) :x(X), y(Y) {}
 
+		// Разность
 		Vector2D<T> operator-(const Vector2D<T>& other)
 		{
-			Vector2D<T> result;
-			result.x = this->x - other.x;
-			result.y = this->y - other.y;
-			return result;
+			return Vector2D<T>(this->x - other.x, this->y - other.y);
 		}
 
+		// Сумма
 		Vector2D<T> operator+(const Vector2D<T>& other)
 		{
-			Vector2D<T> result;
-			result.x = this->x + other.x;
-			result.y = this->y + other.y;
-			return result;
+			return Vector2D<T>(this->x + other.x, this->y + other.y);
 		}
 
-		Vector2D<T> GetAbsolute()
+		// Скалярное произведение (в координатном виде)
+		T operator*(const Vector2D<T>& other)
 		{
-			Vector2D<T> result;
-			result.x = std::abs(this->x);
-			result.y = std::abs(this->y);
-			return result;
+			return (this->x * other.x) + (this->y * other.y);
+		}
+
+		// Произведение вектора на число
+		Vector2D<T> operator*(float muliplier)
+		{
+			return Vector2D<T>(this->x * muliplier, this->y * muliplier);
+		}
+
+		// Вектор с координатами равными модулю предыдщих координат
+		Vector2D<T> GetAbsolute() const
+		{
+			return Vector2D<T>(std::abs(this->x), std::abs(this->y));
+		}
+
+		// Пполучить длину вектора
+		float GetLength() const
+		{
+			return std::sqrt(this->x*this->x + this->y * this->y);
+		}
+
+		// Нормализовать вектор (нормальный вектор - вектор заданной длины, как правило равный единице)
+		void Normalize(float l)
+		{
+			*this = (*this)*(l / this->GetLength());
 		}
 	};
 
@@ -52,33 +71,55 @@ namespace gfx
 		T y;
 		T z;
 
+		// Конструктор структуры
 		Vector3D(T X = 0, T Y = 0, T Z = 0) :x(X), y(Y), z(Z) {}
 
+		// Разность
 		Vector3D<T> operator-(const Vector3D<T>& other)
 		{
-			Vector3D<T> result;
-			result.x = this->x - other.x;
-			result.y = this->y - other.y;
-			result.z = this->z - other.z;
-			return result;
+			return Vector3D<T>(this->x - other.x, this->y - other.y, this->z - other.z);
 		}
 
-		Vector2D<T> operator+(const Vector3D<T>& other)
+		// Сумма
+		Vector3D<T> operator+(const Vector3D<T>& other)
 		{
-			Vector3D<T> result;
-			result.x = this->x + other.x;
-			result.y = this->y + other.y;
-			result.z = this->z + other.z;
-			return result;
+			return Vector3D<T>(this->x + other.x, this->y + other.y, this->z + other.z);
 		}
 
-		Vector2D<T> GetAbsolute()
+		// Скалярное произведение (в координатном виде)
+		T operator*(const Vector3D<T>& other)
 		{
-			Vector2D<T> result;
-			result.x = std::abs(this->x);
-			result.y = std::abs(this->y);
-			result.z = std::abs(this->z);
-			return result;
+			return (this->x * other.x) + (this->y * other.y) + (this->z * other.z);
+		}
+
+		// Произведение вектора на число
+		Vector3D<T> operator*(float muliplier)
+		{
+			return Vector3D<T>(this->x * muliplier, this->y * muliplier, this->z * muliplier);
+		}
+
+		// Векторное произведение
+		Vector3D<T> operator^(const Vector3D<T>& other)
+		{
+			return Vector3D<T>(this->y*other.z - this->z*other.y, this->z*other.x - this->x*other.z, this->x*other.y - this->y*other.x);
+		}
+
+		// Вектор с координатами равными модулю предыдщих координат
+		Vector3D<T> GetAbsolute() const
+		{
+			return Vector3D<T>(std::abs(this->x), std::abs(this->y), std::abs(this->z));
+		}
+
+		// Пполучить длину вектора
+		float GetLength() const
+		{
+			return std::sqrt(this->x*this->x + this->y * this->y + this->z * this->z);
+		}
+
+		// Нормализовать вектор (нормальный вектор - вектор заданной длины, как правило равный единице)
+		void Normalize(float l)
+		{
+			*this = (*this)*(l / this->GetLength());
 		}
 	};
 
