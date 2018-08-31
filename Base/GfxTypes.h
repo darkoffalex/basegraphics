@@ -1,9 +1,75 @@
 ﻿#pragma once
 
 #include <cmath>
+#include <algorithm>
 
 namespace gfx
 {
+	/**
+	* \brief Структра описываюшая цвет точки (пикселя)
+	* \details Структура совместима с WinAPI структурой RGBQUAD (поля идут в том же порядке)
+	*/
+	struct ColorBGR
+	{
+		unsigned char blue;
+		unsigned char green;
+		unsigned char red;
+		unsigned char reserved;
+	};
+
+	/**
+	 * \brief Структура описывающаяя цвет точки (пиксела)
+	 * \details Строуктура представляет из себя набор значений диапозона 0-1 (где 1 это 255)
+	 */
+	struct Color4f
+	{
+		float red;
+		float green;
+		float blue;
+		float alpha;
+
+		Color4f(float r = 0.0f, float g = 0.0f, float b = 0.0f, float a = 0.0f) :red(r), green(g), blue(b), alpha(a) {}
+
+		ColorBGR GetBgr() const
+		{
+			return{
+				static_cast<unsigned char>(std::min<float>(1.0f, this->blue) * 255.0f),
+				static_cast<unsigned char>(std::min<float>(1.0f, this->green)  * 255.0f),
+				static_cast<unsigned char>(std::min<float>(1.0f, this->red) * 255.0f),
+				static_cast<unsigned char>(std::min<float>(1.0f, this->alpha) * 255.0f)
+			};
+		}
+
+		Color4f operator-(const Color4f& other) const
+		{
+			return Color4f(this->red - other.red, this->green - other.green, this->blue - other.blue, this->alpha - other.alpha);
+		}
+
+		Color4f operator+(const Color4f& other) const
+		{
+			return Color4f(this->red + other.red, this->green + other.green, this->blue + other.blue, this->alpha + other.alpha);
+		}
+
+		Color4f operator+=(const Color4f& other)
+		{
+			this->red += other.red;
+			this->green += other.green;
+			this->blue += other.blue;
+			this->alpha += other.alpha;
+			return *this;
+		}
+
+		Color4f operator*(float multiplier) const
+		{
+			return Color4f(this->red * multiplier, this->green * multiplier, this->blue * multiplier, this->alpha * multiplier);
+		}
+
+		Color4f operator/(float multiplier) const
+		{
+			return Color4f(this->red / multiplier, this->green / multiplier, this->blue / multiplier, this->alpha / multiplier);
+		}
+	};
+
 	/**
 	* \brief Шаблонная структкра для двумерных точек и векторов
 	* \tparam T Тип (int по умолчанию)
@@ -48,7 +114,7 @@ namespace gfx
 		}
 
 		// Пполучить длину вектора
-		float GetLength() const
+		double GetLength() const
 		{
 			return std::sqrt(this->x*this->x + this->y * this->y);
 		}

@@ -86,9 +86,8 @@ int main(int argc, char* argv[])
 		};
 
 		// Изобразить 2 закрашенных полигона
-		gfx::SetPolygon(&frameBuffer, { center.x - 100, center.y }, { center.x, center.y - 200}, { center.x + 100, center.y }, { 0,0,255,0 });
-		gfx::SetPolygon(&frameBuffer, { center.x - 100, center.y }, { center.x, center.y + 200 }, { center.x + 100, center.y }, { 255,0,0,0 });
-
+		gfx::SetPolygonInterpolated(&frameBuffer, { center.x - 100, center.y }, { center.x, center.y - 200 }, { center.x + 100, center.y }, { 1.0f,0.0f,0.0f,0.0f }, { 0.0f,1.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f,0.0f });
+		gfx::SetPolygonInterpolated(&frameBuffer, { center.x - 100, center.y }, { center.x, center.y + 200 }, { center.x + 100, center.y }, { 1.0f,0.0f,0.0f,0.0f }, { 0.0f,1.0f,0.0f,0.0f }, { 0.0f,0.0f,1.0f,0.0f });
 
 		// Оконное сообщение (пустая структура)
 		MSG msg = {};

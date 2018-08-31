@@ -1,19 +1,8 @@
 ﻿#pragma once
+#include "GfxTypes.h"
 
 namespace gfx
 {
-	/**
-	* \brief Структра описываюшая цвет точки (пикселя)
-	* \details Структура совместима с WinAPI структурой RGBQUAD (поля идут в том же порядке)
-	*/
-	struct ColorBGR
-	{
-		unsigned char blue;
-		unsigned char green;
-		unsigned char red;
-		unsigned char reserved;
-	};
-
 	/**
 	* \brief Класс буфера изображения (текстуры). Интерфейс
 	* \details При создании объекта данного класса в памяти выделяется необходимое кол-во байт, указатель data_ хранит адрес этого массива

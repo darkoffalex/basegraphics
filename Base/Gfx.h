@@ -50,6 +50,17 @@ namespace gfx
 	void SetLine(TextureBuffer * image, Vector2D<int> pointSrc, Vector2D<int> pointDst, ColorBGR color, bool safePoints = false);
 
 	/**
+	 * \brief Рисование линии (c градиентным цветом)
+	 * \param image Буфер изображения
+	 * \param pointSrc Начальная точка
+	 * \param pointDst Конечная точка
+	 * \param colorSrc Цвет начальной точки
+	 * \param colorDst Цвет конечной точки
+	 * \param safePoints Использовать функцию SetPointSafe для точек
+	 */
+	void SetLineInterpolated(TextureBuffer * image, Vector2D<int> pointSrc, Vector2D<int> pointDst, Color4f colorSrc, Color4f colorDst, bool safePoints = false);
+
+	/**
 	 * \brief Рисование линии (с проверкой выхода начальной и конечной точки за пределы)
 	 * \param image Буфер изображения
 	 * \param pointSrc Начальная точка
@@ -57,6 +68,16 @@ namespace gfx
 	 * \param color Цвет
 	 */
 	void SetLineSafe(TextureBuffer * image, Vector2D<int> pointSrc, Vector2D<int> pointDst, ColorBGR color);
+
+	/**
+	 * \brief Рисование линии (с проверкой выхода начальной и конечной точки за пределы)
+	 * \param image Буфер изображения
+	 * \param pointSrc Начальная точка
+	 * \param pointDst Конечная точка
+	 * \param colorSrc Цвет начальной точки
+	 * \param colorDst Цвет конечной точки
+	 */
+	void SetLineSafeInterpolated(TextureBuffer * image, Vector2D<int> pointSrc, Vector2D<int> pointDst, Color4f colorSrc, Color4f colorDst);
 
 	/**
 	 * \brief Шаблонная функция для нахождения прямоугольной области описывающей точки
@@ -116,6 +137,18 @@ namespace gfx
 	void SetPolygon(TextureBuffer * image, Vector2D<int> p0, Vector2D<int> p1, Vector2D<int> p2, ColorBGR color);
 
 	/**
+	 * \brief Рисование треугольника (полигон)
+	 * \param image Буфер изображения
+	 * \param p0 Точка 1
+	 * \param p1 Точка 2
+	 * \param p2 Точка 3
+	 * \param col0 Цвет точки 1
+	 * \param col1 Цвет точки 2
+	 * \param col2 Цвет точки 3
+	 */
+	void SetPolygonInterpolated(TextureBuffer * image, Vector2D<int> p0, Vector2D<int> p1, Vector2D<int> p2, Color4f col0, Color4f col1, Color4f col2);
+
+	/**
 	 * \brief Находится ли точка внутри треугольника
 	 * \param p Проверяемая точка
 	 * \param a Точка треугольника A
@@ -124,6 +157,16 @@ namespace gfx
 	 * \return Да или нет
 	 */
 	bool IsInTriangle(Vector2D<int> p, Vector2D<int> a, Vector2D<int> b, Vector2D<int> c);
+
+	/**
+	 * \brief Находится ли точка внутри треугольника (векторный метод)
+	 * \param p Проверяемая точка
+	 * \param a Точка треугольника A
+	 * \param b Точка треугольника B
+	 * \param c Точка треугольника C
+	 * \return Да или нет
+	 */
+	bool IsInTriangleVector(Vector2D<int> p, Vector2D<int> a, Vector2D<int> b, Vector2D<int> c);
 
 	/**
 	 * \brief Представление (показ) изображения на поверхности WinAPI окна

@@ -205,12 +205,14 @@ void DrawPolygonModel(gfx::TextureBuffer* image, gfx::VertexBuffer* model)
 
 		// Если интенсивность более ноля (отбрасывать полигоны на которые не падает свет) и есть 3 точки, нарисовать закрашенный треугольник (полигон)
 		if(intensity > 0 && points2D.size() > 2){
+			
 			// Получить оттенок серово учитывая интенсивность освещенности каждого полигона
-			gfx::ColorBGR color = { 
-				static_cast<unsigned char>(255 * intensity), 
+			gfx::ColorBGR color = {
+				static_cast<unsigned char>(255 * intensity),
 				static_cast<unsigned char>(255 * intensity),
 				static_cast<unsigned char>(255 * intensity),
 				0 };
+
 
 			// Нарисовать полигон
 			gfx::SetPolygon(image, points2D[0], points2D[1], points2D[2], color);
