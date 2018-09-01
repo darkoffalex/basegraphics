@@ -380,7 +380,6 @@ namespace gfx
 			SetLineInterpolated(image, p1, p2, col1, col2);
 			SetLineInterpolated(image, p2, p0, col2, col0);
 			
-			
 			// Храним значение первой точки (на вектор которой сдвигаем треугольник)
 			Vector2D<int> oldP0 = p0;
 
@@ -392,6 +391,7 @@ namespace gfx
 			// Если y 3-ей точки оказался нулем - меняем точку 3 и 2 местами
 			if (p2.y == 0) {
 				std::swap(p2, p1);
+				std::swap(col2, col1);
 			}
 
 			// Получить цветовую "дельту" для двух сторон треугольника
@@ -423,7 +423,7 @@ namespace gfx
 						if(w2 >= 0 && (w1 + w2) <= 1)
 						{
 							// Вычислить цвет точки сложив "цветовые вектора"
-							Color4f resultColor = col0 + (deltaCol0 * w2) + (deltaCol1 * w1);
+							Color4f resultColor = col0 + (deltaCol0 * w1) + (deltaCol1 * w2);
 
 							// Установить точку
 							SetPoint(image, x + oldP0.x, y + oldP0.y, resultColor.GetBgr());
