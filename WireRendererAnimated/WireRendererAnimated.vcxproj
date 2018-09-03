@@ -161,6 +161,7 @@
     <ClCompile Include="..\Base\Gfx.cpp" />
     <ClCompile Include="..\Base\TextureBuffer.cpp" />
     <ClCompile Include="..\Base\VertexBuffer.cpp" />
+    <ClCompile Include="..\Base\ZBuffer.cpp" />
     <ClCompile Include="Program.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -168,6 +169,7 @@
     <ClInclude Include="..\Base\GfxTypes.h" />
     <ClInclude Include="..\Base\TextureBuffer.h" />
     <ClInclude Include="..\Base\VertexBuffer.h" />
+    <ClInclude Include="..\Base\ZBuffer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

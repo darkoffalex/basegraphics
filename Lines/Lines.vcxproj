@@ -21,12 +21,14 @@
   <ItemGroup>
     <ClCompile Include="..\Base\Gfx.cpp" />
     <ClCompile Include="..\Base\TextureBuffer.cpp" />
+    <ClCompile Include="..\Base\ZBuffer.cpp" />
     <ClCompile Include="Program.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Base\Gfx.h" />
     <ClInclude Include="..\Base\GfxTypes.h" />
     <ClInclude Include="..\Base\TextureBuffer.h" />
+    <ClInclude Include="..\Base\ZBuffer.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{230AA956-58CC-42DE-A687-72BC8F8492A8}</ProjectGuid>
