@@ -22,14 +22,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 */
 void DrawPolygonModel(gfx::TextureBuffer* image, gfx::VertexBuffer* model);
 
+/**
+ * \brief Рисование полигональной модели c учетом глубины
+ * \param image Буфер изображения
+ * \param zBuffer Буфер глубины
+ * \param model Буфер вершин
+ */
+void DrawPolygonModelZBuffered(gfx::TextureBuffer* image, gfx::ZBuffer* zBuffer, gfx::VertexBuffer* model);
+
 // Буфер кадра
 gfx::TextureBuffer frameBuffer;
+
+// Буфер глубины
+gfx::ZBuffer zBuffer;
 
 // Буффер вершин
 gfx::VertexBuffer vertexBuffer;
 
 // Направление источника света (вперед)
-gfx::Vector3D<float> lightDIrection(0.0f,0.0f,-1.0f);
+gfx::Vector3D<float> lightDirection(0.0f,0.0f,-1.0f);
 
 /**
 * \brief Точка входа
@@ -93,12 +104,19 @@ int main(int argc, char* argv[])
 		frameBuffer = gfx::TextureBuffer(clientRect.right, clientRect.bottom);
 		std::cout << "INFO: Frame-buffer initialized  (size : " << frameBuffer.GetSize() << " bytes)" << std::endl;
 
+		// Создать буфур глубины по размерам клиентской области (изначально заполнен единицами)
+		zBuffer = gfx::ZBuffer(clientRect.right, clientRect.bottom, 1.0f);
+		std::cout << "INFO: Z-buffer initialized (size : " << zBuffer.GetSize() << " bytes)" << std::endl;
+
 		// Загрузить вершины в буфер вершин из файла
 		vertexBuffer.LoadFromFile("models/african_head.obj");
 		std::cout << "INFO: Vertex-buffer initialized (size: " << vertexBuffer.GetSize() << " bytes, " << vertexBuffer.GetVertices().size() << " model, " << vertexBuffer.GetFaces().size() << " faces)" << std::endl;
 
 		// Построить изображение модели
-		DrawPolygonModel(&frameBuffer, &vertexBuffer);
+		//DrawPolygonModel(&frameBuffer, &vertexBuffer);
+
+		// Построить изображение модели используя тест глубины
+		DrawPolygonModelZBuffered(&frameBuffer, &zBuffer, &vertexBuffer);
 
 		// Оконное сообщение (пустая структура)
 		MSG msg = {};
@@ -201,7 +219,7 @@ void DrawPolygonModel(gfx::TextureBuffer* image, gfx::VertexBuffer* model)
 		normal.Normalize(1.0f);
 		// Вычислить интенсивность освещения (направлен ли источник на полигон или свет проход по касательной)
 		// Используется скалярное произведение нормали и вектора направления освещения
-		float intensity = normal*lightDIrection;
+		float intensity = normal*lightDirection;
 
 		// Если интенсивность более ноля (отбрасывать полигоны на которые не падает свет) и есть 3 точки, нарисовать закрашенный треугольник (полигон)
 		if(intensity > 0 && points2D.size() > 2){
@@ -216,6 +234,51 @@ void DrawPolygonModel(gfx::TextureBuffer* image, gfx::VertexBuffer* model)
 
 			// Нарисовать полигон
 			gfx::SetPolygon(image, points2D[0], points2D[1], points2D[2], color);
+		}
+	}
+}
+
+/**
+* \brief Рисование полигональной модели c учетом глубины
+* \param image Буфер изображения
+* \param zBuffer Буфер глубины
+* \param model Буфер вершин
+*/
+void DrawPolygonModelZBuffered(gfx::TextureBuffer* image, gfx::ZBuffer* zBuffer, gfx::VertexBuffer* model)
+{
+	// Проход по всем полигонам модели (полигон - массив индексов вершин, обычно 3 индекса)
+	for (unsigned int i = 0; i < model->GetFaces().size(); i++)
+	{
+		// Получение индексов текущего полигона
+		std::vector<int> faceIndices = model->GetFaces()[i];
+
+		// 3D точки треугольника (в координатах сцены/мира)
+		std::vector<gfx::Vector3D<float>> points3D;
+
+		// Проход по всем точкам полигона (если считать что их 3)
+		for (unsigned int j = 0; j < 3; j++)
+		{
+			// 3D точка треуглльника
+			gfx::Vector3D<float> point3D = model->GetVertices()[faceIndices[j]];
+			points3D.push_back(point3D);
+		}
+
+		// Нормаль к полигону (вычисляется как векторное произведение двух ребер треугольника)
+		gfx::Vector3D<float> normal = (points3D[2] - points3D[0]) ^ (points3D[1] - points3D[0]);
+		// Привести единичной длине
+		normal.Normalize(1.0f);
+		// Вычислить интенсивность освещения (направлен ли источник на полигон или свет проход по касательной)
+		// Используется скалярное произведение нормали и вектора направления освещения
+		float intensity = normal*lightDirection;
+
+		// Если интенсивность более ноля (отбрасывать полигоны на которые не падает свет) и есть 3 точки, нарисовать закрашенный треугольник (полигон)
+		if (intensity > 0) {
+
+			// Получить оттенок серово учитывая интенсивность освещенности каждого полигона
+			gfx::Color4f color = { intensity,intensity,intensity };
+
+			// Растеризрвать полигон учитывая его глубину
+			gfx::RaterizePolygon(image, zBuffer, 2.0, -10.0f, points3D[0], points3D[1], points3D[2], color, color, color);
 		}
 	}
 }

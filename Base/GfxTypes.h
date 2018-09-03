@@ -3,6 +3,8 @@
 #include <cmath>
 #include <algorithm>
 
+#define PI 3.14159265
+
 namespace gfx
 {
 	/**
@@ -124,6 +126,15 @@ namespace gfx
 		{
 			*this = (*this)*(l / this->GetLength());
 		}
+
+		// Вращение на заданный угол вокруг оси Z
+		void RotateAroundZ(float angle)
+		{
+			T oldX = this->x;
+			T oldY = this->y;
+			this->x = static_cast<T>(cos(angle * PI / 180)*oldX + sin(angle * PI / 180)*oldY);
+			this->y = static_cast<T>(cos(angle * PI / 180)*oldY - sin(angle * PI / 180)*oldX);
+		}
 	};
 
 	/**
@@ -186,6 +197,15 @@ namespace gfx
 		void Normalize(float l)
 		{
 			*this = (*this)*(l / this->GetLength());
+		}
+
+		// Вращение на заданный угол вокруг оси Y
+		void RotateAroundY(float angle)
+		{
+			T oldX = this->x;
+			T oldZ = this->z;
+			this->x = static_cast<T>(cos(angle * PI / 180)*oldX + sin(angle * PI / 180)*oldZ);
+			this->z = static_cast<T>(cos(angle * PI / 180)*oldZ - sin(angle * PI / 180)*oldX);
 		}
 	};
 

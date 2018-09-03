@@ -218,8 +218,8 @@ void DrawWireModel(gfx::TextureBuffer* image, gfx::VertexBuffer* model, gfx::Col
 			gfx::Vector3D<float> v1 = model->GetVertices()[faceIndices[(j + 1) % 3]];
 
 			// Получаем новый X (для начальной и конечной точки) с учетом угла поворота
-			double newX0 = cos(rotAngle * PI / 180)*v0.z - sin(rotAngle * PI / 180)*v0.x;
-			double newX1 = cos(rotAngle * PI / 180)*v1.z - sin(rotAngle * PI / 180)*v1.x;
+			double newX0 = cos(rotAngle * PI / 180)*v0.x + sin(rotAngle * PI / 180)*v0.z;
+			double newX1 = cos(rotAngle * PI / 180)*v1.x + sin(rotAngle * PI / 180)*v1.z;
 
 			// Преобразование однородных координат [-1,1] вершин в оконные координаты [0,ширина]
 			// Используем только 2 ости (X и Y). Ось Z (глубина) не задействуется, в рузультате
