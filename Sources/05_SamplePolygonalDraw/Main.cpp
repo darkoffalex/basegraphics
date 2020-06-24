@@ -57,16 +57,20 @@ void PresentFrame(void *pixels, int width, int height, HWND hWnd);
  * @param indices Массив индексов
  * @param position Положение меша
  * @param orientation Ориентация меша
- * @param color Цвет
+ * @param color Цвет (RGB в диапозоне от 0 до 1)
  * @param projectPerspective Использовать перспективную проекцию
+ * @param backFaceCulling Отбрасывать задние грани
+ * @param fillFaces Заливка граней (false для сеточной отрисовки)
  */
 void DrawMesh(gfx::ImageBuffer<RGBQUAD>* frameBuffer,
         const std::vector<math::Vec3<float>>& vertices,
         const std::vector<size_t>& indices,
         const math::Vec3<float>& position,
         const math::Vec3<float>& orientation,
-        const RGBQUAD& color = {0,255,0,0},
-        bool projectPerspective = true);
+        const math::Vec3<float>& color = {0.0f,1.0f,0.0f},
+        bool projectPerspective = true,
+        bool backFaceCulling = false,
+        bool fillFaces = false);
 
 /**
  * Точка входа
@@ -148,19 +152,19 @@ int main(int argc, char* argv[])
 
         // Индексы (тройки вершин)
         std::vector<size_t> indices {
-            0,1,2, 2,3,0,
-            0,4,5, 5,1,0,
-            1,5,6, 6,2,1,
-            5,6,7, 7,4,5,
-            3,7,4, 4,0,3,
-            2,6,7, 7,3,2
+                0,1,2, 2,3,0,
+                1,5,6, 6,2,1,
+                5,4,7, 7,6,5,
+                4,0,3, 3,7,4,
+                4,5,1, 1,0,4,
+                3,2,6, 6,7,3
         };
 
         // Текущий угол поворота
         float rotationAngle = 0.0f;
 
         // Скорость вращения
-        float angleSpeed = 0.03f;
+        float angleSpeed = 0.02f;
 
         /** MAIN LOOP **/
 
@@ -196,7 +200,16 @@ int main(int argc, char* argv[])
             rotationAngle += (angleSpeed * _timer->getDelta());
 
             // Нарисовать полигональный меш
-            DrawMesh(&frameBuffer,vertices,indices,{0.0f,0.0f,-4.0f},{0.0f,rotationAngle,0.0f});
+            DrawMesh(
+                    &frameBuffer,
+                    vertices,
+                    indices,
+                    {0.0f,0.0f,-4.0f},
+                    {rotationAngle,rotationAngle,0.0f},
+                    {0.0f,1.0f,0.0f},
+                    true,
+                    true,
+                    true);
 
             // Показ кадра
             PresentFrame(frameBuffer.getData(), static_cast<int>(frameBuffer.getWidth()), static_cast<int>(frameBuffer.getHeight()),_hwnd);
@@ -311,12 +324,20 @@ void PresentFrame(void *pixels, int width, int height, HWND hWnd)
  * @param indices Массив индексов
  * @param position Положение меша
  * @param orientation Ориентация меша
- * @param color Цвет
+ * @param color Цвет (RGB в диапозоне от 0 до 1)
  * @param projectPerspective Использовать перспективную проекцию
+ * @param backFaceCulling Отбрасывать задние грани
+ * @param fillFaces Заливка граней (false для сеточной отрисовки)
  */
-void DrawMesh(gfx::ImageBuffer<RGBQUAD> *frameBuffer, const std::vector<math::Vec3<float>> &vertices,
-              const std::vector<size_t> &indices, const math::Vec3<float> &position,
-              const math::Vec3<float> &orientation, const RGBQUAD &color, bool projectPerspective)
+void DrawMesh(gfx::ImageBuffer<RGBQUAD>* frameBuffer,
+              const std::vector<math::Vec3<float>>& vertices,
+              const std::vector<size_t>& indices,
+              const math::Vec3<float>& position,
+              const math::Vec3<float>& orientation,
+              const math::Vec3<float>& color,
+              bool projectPerspective,
+              bool backFaceCulling,
+              bool fillFaces)
 {
     // Пропорции области вида
     float aspectRatio = static_cast<float>(frameBuffer->getWidth()) / static_cast<float>(frameBuffer->getHeight());
@@ -324,8 +345,10 @@ void DrawMesh(gfx::ImageBuffer<RGBQUAD> *frameBuffer, const std::vector<math::Ve
     // Пройти по всем индексам (шаг - 3 индекса)
     for(size_t i = 3; i <= indices.size(); i+=3)
     {
-        // Точки треугольника
+        // Точки треугольника (в координатаъ экрана)
         std::vector<math::Vec2<int>> triangle;
+        // Точки в NDC-координатах
+        std::vector<math::Vec3<float>> triangleNdc;
 
         // Произвести необходимые преобразования кординат точек, для отображения на экране
         for(size_t j = 0; j < 3; j++)
@@ -351,15 +374,52 @@ void DrawMesh(gfx::ImageBuffer<RGBQUAD> *frameBuffer, const std::vector<math::Ve
 
             // Добавить в треугольник (2D)
             triangle.push_back(sp);
+            triangleNdc.push_back(p);
         }
 
-        // Написовать треугольник
-        gfx::SetTriangle(
-                frameBuffer,
-                triangle[0].x,triangle[0].y,
-                triangle[1].x,triangle[1].y,
-                triangle[2].x,triangle[2].y,
-                {0,255,0,0},
-                false);
+        // Получить нормаль для отбрасывания задних граней (инвертируем, поскольку ось Y в координатах экрана инвертирована)
+        auto normalForCulling = -math::Normalize(math::Cross(
+                math::Normalize(math::Vec3<float>(triangle[2].x - triangle[0].x,triangle[2].y - triangle[0].y,0.0f)),
+                math::Normalize(math::Vec3<float>(triangle[1].x - triangle[0].x,triangle[1].y - triangle[0].y,0.0f))
+                ));
+
+        // Скалярное произведения вектора к зрителю и нормали треугольника (показывает насколько сильно треугольник повернут к зрителю)
+        auto dotForCulling = math::Dot(normalForCulling,{0.0f, 0.0f, 1.0f});
+
+        // Если нужно отрисовывать треугольник (если включен backFaceCulling, то отрисовывается в случае если повернут к зрителю)
+        if(!backFaceCulling || dotForCulling > 0)
+        {
+            // Яркость цвета
+            float brightness = 1.0f;
+
+            // Если нужна заливка граней
+            if(fillFaces)
+            {
+                // Нормаль для вычисления освещенности
+                auto normal = math::Normalize(math::Cross(
+                        math::Normalize(triangleNdc[2] - triangleNdc[0]),
+                        math::Normalize(triangleNdc[1] - triangleNdc[0])
+                ));
+
+                // Яркость тем сильнее, чем больше грань обернута к свету (считаем что свет исходит от зрителя)
+                brightness = math::Dot(normal,{0.0f, 0.0f, 1.0f});
+            }
+
+            // Написовать треугольник
+            gfx::SetTriangle(
+                    frameBuffer,
+                    triangle[0].x,triangle[0].y,
+                    triangle[1].x,triangle[1].y,
+                    triangle[2].x,triangle[2].y,
+                    {
+                        static_cast<unsigned char>(color.b * brightness * 255.0f),
+                        static_cast<unsigned char>(color.g * brightness * 255.0f),
+                        static_cast<unsigned char>(color.r * brightness * 255.0f),
+                        0
+                        },
+                    fillFaces);
+        }
+
+
     }
 }
