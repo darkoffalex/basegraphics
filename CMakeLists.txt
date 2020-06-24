@@ -30,5 +30,12 @@ add_subdirectory("Sources/Math")
 # Библиотека для работы с графикой (header-only)
 add_subdirectory("Sources/Gfx")
 
+# Библилтека вспомогательных инструментов
+add_subdirectory("Sources/Tools")
+
 # Примеры приложений
-add_subdirectory("Sources/SamplePoint")
+add_subdirectory("Sources/01_SamplePoint")
+add_subdirectory("Sources/02_SampleLines")
+add_subdirectory("Sources/03_SamplePointRotation")
+add_subdirectory("Sources/04_SamplePointProjection")
+add_subdirectory("Sources/05_SamplePolygonalDraw")

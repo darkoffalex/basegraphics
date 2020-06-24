@@ -47,6 +47,20 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 void PresentFrame(void *pixels, int width, int height, HWND hWnd);
 
 /**
+ * Нарисовать объект
+ * @param frameBuffer Кадровый буфер
+ * @param vertices Вершины
+ * @param indices Индексы
+ * @param color Цвет объекта
+ * @param projectPerspective Перспективная проекция точек
+ */
+void DrawObject(gfx::ImageBuffer<RGBQUAD>* frameBuffer,
+        const std::vector<math::Vec3<float>>& vertices,
+        const std::vector<size_t>& indices,
+        const RGBQUAD& color = {0,255,0,0},
+        bool projectPerspective = true);
+
+/**
  * Точка входа
  * @param argc Кол-во аргументов
  * @param argv Аргмуенты
@@ -112,16 +126,60 @@ int main(int argc, char* argv[])
         std::cout << "INFO: Frame-buffer initialized  (resolution : " << frameBuffer.getWidth() << "x" << frameBuffer.getHeight() << ", size : " << frameBuffer.getSize() << " bytes)" << std::endl;
 
         // Пропорции области вида
-        //float aspectRatio = static_cast<float>(clientRect.right) / static_cast<float>(clientRect.bottom);
+        float aspectRatio = static_cast<float>(clientRect.right) / static_cast<float>(clientRect.bottom);
 
-        // Точка в клип-координатах
-        math::Vec2<float> center = {0.0f,0.0f};
+        // Положения вершин куба
+        std::vector<math::Vec3<float>> vertices {
+                {-1.0f,1.0f,1.0f},
+                {1.0f,1.0f,1.0f},
+                {1.0f,-1.0f,1.0f},
+                {-1.0f,-1.0f,1.0f},
 
-        // Перевод в пространство экрана
-        math::Vec2<unsigned int> centerScreen = math::ClipToScreen(center,frameBuffer.getWidth(),frameBuffer.getHeight());
+                {-1.0f,1.0f,-1.0f},
+                {1.0f,1.0f,-1.0f},
+                {1.0f,-1.0f,-1.0f},
+                {-1.0f,-1.0f,-1.0f}
+        };
 
-        // Нарисовать точку
-        gfx::SetPint(&frameBuffer,centerScreen.x,centerScreen.y,{0,255,0,0});
+        // Индексы (тройки вершин)
+        std::vector<size_t> indices {
+            0,1,2, 2,3,0,
+            0,4,5, 5,1,0,
+            1,5,6, 6,2,1,
+            5,6,7, 7,4,5,
+            3,7,4, 4,0,3,
+            2,6,7, 7,3,2
+        };
+
+        // Пройти по всем индексам (шаг - 3 индекса)
+        for(size_t i = 3; i <= indices.size(); i+=3)
+        {
+            // Пройтись по тройке индексов (по 2 чтобы игнорировать диагональные соединения)
+            for(size_t j = 0; j < 2; j++)
+            {
+                // Получить положение двух точек
+                auto p0 = vertices[indices[(i-3)+j]];
+                auto p1 = vertices[indices[(i-3)+((j + 1) % 3)]];
+
+                // Сдвигаем точки
+                p0 = p0 + math::Vec3<float>(0.0f,0.0f,-4.0f);
+                p1 = p1 + math::Vec3<float>(0.0f,0.0f,-4.0f);
+
+                // Проекция положений двух точек
+//                auto pp0 = math::ProjectOrthogonal(p0,-2.0f,2.0f,-2.0f,2.0f,0.1f,100.0f,aspectRatio);
+//                auto pp1 = math::ProjectOrthogonal(p1,-2.0f,2.0f,-2.0f,2.0f,0.1f,100.0f,aspectRatio);
+
+                auto pp0 = math::ProjectPerspective(p0,45.0f,0.1f,100.0f,aspectRatio);
+                auto pp1 = math::ProjectPerspective(p1,45.0f,0.1f,100.0f,aspectRatio);
+
+                // Положение в пространстве экрана
+                auto sp0 = math::NdcToScreen({pp0.x, pp0.y}, frameBuffer.getWidth(), frameBuffer.getHeight());
+                auto sp1 = math::NdcToScreen({pp1.x, pp1.y}, frameBuffer.getWidth(), frameBuffer.getHeight());
+
+                // Написовать линию
+                gfx::SetLine(&frameBuffer,sp0.x,sp0.y,sp1.x,sp1.y,{0,255,0,0},gfx::SAFE_CHECK_ALL_POINTS);
+            }
+        }
 
         /** MAIN LOOP **/
 
@@ -160,6 +218,46 @@ int main(int argc, char* argv[])
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Нарисовать объект
+ * @param frameBuffer Кадровый буфер
+ * @param vertices Вершины
+ * @param indices Индексы
+ * @param color Цвет объекта
+ * @param projectPerspective Перспективная проекция точек
+ */
+void DrawObject(gfx::ImageBuffer<RGBQUAD> *frameBuffer, const std::vector<math::Vec3<float>> &vertices,
+                const std::vector<size_t> &indices, const RGBQUAD &color, bool projectPerspective)
+{
+    // Пропорции области вида
+    float aspectRatio = static_cast<float>(frameBuffer->getWidth()) / static_cast<float>(frameBuffer->getHeight());
+
+    // Пройти по всем индексам (шаг - 3 индекса)
+    for(size_t i = 3; i <= indices.size(); i+=3)
+    {
+        // Точки треугольника
+        std::vector<math::Vec2<int>> triangle;
+
+        // Произвести необходимые преобразования кординат точек, для отображения на экране
+        for(size_t j = 0; j < 3; j++)
+        {
+            auto p = vertices[indices[(i-3)+j]];
+            auto pp = projectPerspective ? math::ProjectPerspective(p,45.0f,0.1f,100.0f,aspectRatio) : math::ProjectOrthogonal(p,-2.0f,2.0f,-2.0f,2.0f,0.1f,100.0f,aspectRatio);
+            auto sp = math::NdcToScreen({pp.x, pp.y}, frameBuffer->getWidth(), frameBuffer->getHeight());
+            triangle.push_back(sp);
+        }
+
+        // Написовать треугольник
+        gfx::SetTriangle(
+                frameBuffer,
+                triangle[0].x,triangle[0].y,
+                triangle[1].x,triangle[1].y,
+                triangle[2].x,triangle[2].y,
+                {0,255,0,0},
+                false);
+    }
+}
 
 /**
  * Обработчик оконных сообщений

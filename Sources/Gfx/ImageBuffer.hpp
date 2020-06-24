@@ -154,6 +154,7 @@ namespace gfx
         void clear(const T& clearValue){
             if((this->width_ * this->height_) > 0 && this->data_){
                 std::fill_n(this->data_, this->width_ * this->height_, clearValue);
+                //memset(this->data_,0,this->width_ * this->height_ * sizeof(T));
             }
         }
 

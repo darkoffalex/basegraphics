@@ -5,3 +5,7 @@ out/
 CMakeSettings.json
 Folder.DotSettings.user
 cmake-build-debug/
+cmake-build-debug-mingw-x86/
+cmake-build-release-mingw-x86/
+cmake-build-debug-visual-studio-x86/
+cmake-build-release-visual-studio-x86/

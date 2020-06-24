@@ -2,8 +2,8 @@
 cmake_minimum_required(VERSION 3.15)
 
 # Название приложения
-set(TARGET_NAME "SamplePoint")
-set(TARGET_BIN_NAME "SamplePoint")
+set(TARGET_NAME "04_SampleProjection")
+set(TARGET_BIN_NAME "04_SampleProjection")
 
 # Добавляем .exe (проект в Visual Studio)
 add_executable(${TARGET_NAME}

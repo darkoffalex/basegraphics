@@ -1,6 +1,6 @@
 /**
  * Мини-библиотека для работы с математикой
- * Copyright (C) 2019 by Alex "DarkWolf" Nem - https://github.com/darkoffalex
+ * Copyright (C) 2020 by Alex "DarkWolf" Nem - https://github.com/darkoffalex
  */
 
 #pragma once
@@ -8,6 +8,8 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+
+#define M_PI 3.14159265358979323846  /* pi */
 
 namespace math
 {
@@ -26,6 +28,11 @@ namespace math
         Vec2<T> operator*(const T& value) const
         {
             return {this->x * value, this->y * value};
+        }
+
+        Vec2<T> operator/(const T& value) const
+        {
+            return {this->x / value, this->y / value};
         }
 
         Vec2<T> operator*(const Vec2<T>& other) const
@@ -70,6 +77,11 @@ namespace math
             return {this->x * value, this->y * value, this->z * value};
         }
 
+        Vec3<T> operator/(const T& value) const
+        {
+            return {this->x / value, this->y / value, this->z / value};
+        }
+
         Vec3<T> operator*(const Vec3<T>& other) const
         {
             return {this->x * other.x, this->y * other.y, this->z * other.z};
@@ -111,6 +123,11 @@ namespace math
         Vec4<T> operator*(const T& value) const
         {
             return {this->x * value, this->y * value, this->z * value, this->w * value};
+        }
+
+        Vec4<T> operator/(const T& value) const
+        {
+            return {this->x / value, this->y / value, this->z / value, this->w / value};
         }
 
         Vec4<T> operator*(const Vec4<T>& other) const
@@ -743,6 +760,82 @@ namespace math
     }
 
     /**
+     * Вращать вектор или точку вокуруг оси X
+     * @tparam T Тип компонентов
+     * @param v Вектор или точка
+     * @param angle Угол
+     * @return Вектор или точка после вращения
+     */
+    template <typename T = float>
+    Vec3<T> RotateAroundX(const Vec3<T>& v, const float& angle)
+    {
+        auto angleRad = angle * (M_PI / 180.0f);
+
+        return {
+            v.x,
+            (v.y * cosf(angleRad)) - (v.z * sinf(angleRad)),
+            (v.y * sinf(angleRad)) + (v.z * cosf(angleRad))
+        };
+    }
+
+    /**
+     * Вращать вектор или точку вокуруг оси Y
+     * @tparam T Тип компонентов
+     * @param v Вектор или точка
+     * @param angle Угол
+     * @return Вектор или точка после вращения
+     */
+    template <typename T = float>
+    Vec3<T> RotateAroundY(const Vec3<T>& v, const float& angle)
+    {
+        auto angleRad = angle * (M_PI / 180.0f);
+
+        return {
+                (v.x * cosf(angleRad)) + (v.z * sinf(angleRad)),
+                v.y,
+                -(v.x * sinf(angleRad)) + (v.z * cosf(angleRad))
+        };
+    }
+
+    /**
+     * Вращать вектор или точку вокуруг оси Z
+     * @tparam T Тип компонентов
+     * @param v Вектор или точка
+     * @param angle Угол
+     * @return Вектор или точка после вращения
+     */
+    template <typename T = float>
+    Vec3<T> RotateAroundZ(const Vec3<T>& v, const float& angle)
+    {
+        auto angleRad = angle * (M_PI / 180.0f);
+
+        return {
+                (v.x * cosf(angleRad)) - (v.y * sinf(angleRad)),
+                (v.x * sinf(angleRad)) + (v.y * cosf(angleRad)),
+                v.z
+        };
+    }
+
+    /**
+     * Вращать вектор или точку на плоскости
+     * @tparam T Тип компонентов
+     * @param v Вектор или точка
+     * @param angle Угол
+     * @return Вектор или точка после вращения
+     */
+    template <typename T = float>
+    Vec2<T> Rotate2D(const Vec2<T>& v, const float& angle)
+    {
+        auto angleRad = angle * (M_PI / 180.0f);
+
+        return {
+                (v.x * cosf(angleRad)) - (v.y * sinf(angleRad)),
+                (v.x * sinf(angleRad)) + (v.y * cosf(angleRad))
+        };
+    }
+
+
+    /**
      * Получить матрицу поворта вокруг оси X
      * @tparam T Тип компонентов
      * @param angle Угол в градусах
@@ -752,7 +845,10 @@ namespace math
     Mat3<T> GetRotationMatX(const float& angle)
     {
         auto angleRad = angle * (M_PI / 180.0f);
-        return Mat3<T>({1.0f,0.0f,0.0f},{0.0f,cosf(angleRad),sinf(angleRad)},{0.0f,-sinf(angleRad),cosf(angleRad)});
+        return Mat3<T>(
+                {1.0f,0.0f,0.0f},
+                {0.0f,cosf(angleRad),sinf(angleRad)},
+                {0.0f,-sinf(angleRad),cosf(angleRad)});
     }
 
     /**
@@ -765,7 +861,10 @@ namespace math
     Mat3<T> GetRotationMatY(const float& angle)
     {
         auto angleRad = angle * (M_PI / 180.0f);
-        return Mat3<T>({cosf(angleRad),0.0f,-sinf(angleRad)},{0.0f,1.0f,0.0f},{sinf(angleRad),0.0f,cosf(angleRad)});
+        return Mat3<T>(
+                {cosf(angleRad),0.0f,-sinf(angleRad)},
+                {0.0f,1.0f,0.0f},
+                {sinf(angleRad),0.0f,cosf(angleRad)});
     }
 
     /**
@@ -778,7 +877,10 @@ namespace math
     Mat3<T> GetRotationMatZ(const float& angle)
     {
         auto angleRad = angle * (M_PI / 180.0f);
-        return Mat3<T>({cosf(angleRad),sinf(angleRad),0.0f},{-sinf(angleRad),cosf(angleRad),0.0f},{0.0f,0.0f,1.0f});
+        return Mat3<T>(
+                {cosf(angleRad),sinf(angleRad),0.0f},
+                {-sinf(angleRad),cosf(angleRad),0.0f},
+                {0.0f,0.0f,1.0f});
     }
 
     /**
@@ -814,11 +916,11 @@ namespace math
      * @return Точка в координатах экрана (верхний левый угол - начало координат)
      */
     template <typename T = float>
-    Vec2<unsigned> ClipToScreen(const Vec2<T>& point, unsigned width, unsigned height)
+    Vec2<int> NdcToScreen(const Vec2<T>& point, unsigned width, unsigned height)
     {
         return {
-            static_cast<unsigned>(((point.x + 1.0f)/2.0f) * (width-1)),
-            static_cast<unsigned>(((-point.y + 1.0f)/2.0f) * (height-1)),
+            static_cast<int>(((point.x + 1.0f)/2.0f) * (width-1)),
+            static_cast<int>(((-point.y + 1.0f)/2.0f) * (height-1)),
         };
     }
 
@@ -826,10 +928,10 @@ namespace math
      * Ортогональная проекция точки
      * @tparam T Тип компонентов
      * @param point Исходная точка
-     * @param left Левая грань видимой области (в клип-координатах)
-     * @param right Права грань видимой области (в клип-координатах)
-     * @param bottom Нижняя грань видимой области (в клип-координатах)
-     * @param top Верхняя грань видимой области (в клип-координатах)
+     * @param left Левая грань видимой области (в NDC-координатах)
+     * @param right Права грань видимой области (в NDC-координатах)
+     * @param bottom Нижняя грань видимой области (в NDC-координатах)
+     * @param top Верхняя грань видимой области (в NDC-координатах)
      * @param zNear Ближняя грань видимой области (0 для Z значения)
      * @param zFar Дальняя грань видимой области (1 для Z значения)
      * @param aspectRatio Пропорции экрана
@@ -844,17 +946,39 @@ namespace math
         return {
             ((point.x - left) / ((right - left) / static_cast<T>(2))) - static_cast<T>(1),
             ((point.y - bottom) / ((top - bottom) / static_cast<T>(2))) - static_cast<T>(1),
-            (point.z - zNear) / (zFar - zNear)
+            (point.z + zNear) / (zNear - zFar)
+        };
+    }
+
+    /**
+     * Перспективная проекция точки
+     * @tparam T Тип компонентов
+     * @param point Исходная точка
+     * @param fov Угол обзора
+     * @param zNear Ближняя грань видимой области (0 для Z значения)
+     * @param zFar  Дальняя грань видимой области (1 для Z значения)
+     * @param aspectRatio Пропорции экрана
+     * @return Спроецированная точка
+     */
+    template <typename T = float>
+    Vec3<T> ProjectPerspective(const Vec3<T>& point, const float& fov, T zNear, T zFar, T aspectRatio = 1)
+    {
+        auto fovRad = fov * (M_PI / 180.0f);
+
+        return {
+                ((point.x * (1 / tanf(fovRad))) / -point.z) / aspectRatio,
+                (point.y * (1 / tanf(fovRad))) / -point.z,
+                (point.z + zNear) / (zNear - zFar)
         };
     }
 
     /**
      * Получить матрицу ортогональной проекции
      * @tparam T Тип компонентов
-     * @param left Левая грань видимой области (в клип-координатах)
-     * @param right Права грань видимой области (в клип-координатах)
-     * @param bottom Нижняя грань видимой области (в клип-координатах)
-     * @param top Верхняя грань видимой области (в клип-координатах)
+     * @param left Левая грань видимой области (в NDC-координатах)
+     * @param right Права грань видимой области (в NDC-координатах)
+     * @param bottom Нижняя грань видимой области (в NDC-координатах)
+     * @param top Верхняя грань видимой области (в NDC-координатах)
      * @param zNear Ближняя грань видимой области (0 для Z значения)
      * @param zFar Дальняя грань видимой области (1 для Z значения)
      * @param aspectRatio Пропорции экрана
@@ -873,7 +997,7 @@ namespace math
         return Mat4<T>(
                 {(static_cast<T>(2) / dx),0,0,0},
                 {0,(static_cast<T>(2) / dy),0,0},
-                {0,0,(static_cast<T>(1) / dz),0},
+                {0,0,-(static_cast<T>(1) / dz),0},
                 {-(right + left) / dx, -(top + bottom) / dy,-zNear / dz,1});
     }
 }
