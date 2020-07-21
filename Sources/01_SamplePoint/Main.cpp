@@ -120,8 +120,20 @@ int main(int argc, char* argv[])
         // Перевод в пространство экрана
         math::Vec2<int> centerScreen = math::NdcToScreen(center, frameBuffer.getWidth(), frameBuffer.getHeight());
 
-        // Нарисовать точку
-        gfx::SetPint(&frameBuffer,centerScreen.x,centerScreen.y,{0,255,0,0});
+        // Пройтись по пикселям
+        for(int y = 0; y < frameBuffer.getHeight(); y++)
+        {
+            for(int x = 0; x < frameBuffer.getWidth(); x++)
+            {
+                // Случайный цвет
+                unsigned char r = rand() % 254 + 1;
+                unsigned char g = rand() % 254 + 1;
+                unsigned char b = rand() % 254 + 1;
+
+                // Установить цвет
+                gfx::SetPint(&frameBuffer,x,y,{b,g,r,0});
+            }
+        }
 
         /** MAIN LOOP **/
 

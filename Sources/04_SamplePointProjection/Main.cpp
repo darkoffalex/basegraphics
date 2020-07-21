@@ -169,8 +169,8 @@ int main(int argc, char* argv[])
 //                auto pp0 = math::ProjectOrthogonal(p0,-2.0f,2.0f,-2.0f,2.0f,0.1f,100.0f,aspectRatio);
 //                auto pp1 = math::ProjectOrthogonal(p1,-2.0f,2.0f,-2.0f,2.0f,0.1f,100.0f,aspectRatio);
 
-                auto pp0 = math::ProjectPerspective(p0,45.0f,0.1f,100.0f,aspectRatio);
-                auto pp1 = math::ProjectPerspective(p1,45.0f,0.1f,100.0f,aspectRatio);
+                auto pp0 = math::ProjectPerspective(p0,90.0f,0.1f,100.0f,aspectRatio);
+                auto pp1 = math::ProjectPerspective(p1,90.0f,0.1f,100.0f,aspectRatio);
 
                 // Положение в пространстве экрана
                 auto sp0 = math::NdcToScreen({pp0.x, pp0.y}, frameBuffer.getWidth(), frameBuffer.getHeight());

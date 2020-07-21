@@ -963,12 +963,13 @@ namespace math
     template <typename T = float>
     Vec3<T> ProjectPerspective(const Vec3<T>& point, const float& fov, T zNear, T zFar, T aspectRatio = 1)
     {
-        auto fovRad = fov * (M_PI / 180.0f);
+        auto halfFovRad = (fov / 2) * (M_PI / 180.0f);
 
         return {
-                ((point.x * (1 / tanf(fovRad))) / -point.z) / aspectRatio,
-                (point.y * (1 / tanf(fovRad))) / -point.z,
-                (point.z + zNear) / (zNear - zFar)
+                (point.x * (-1/(tanf(halfFovRad) * aspectRatio))) / point.z,
+                (point.y * (-1/tanf(halfFovRad))) / point.z,
+                //(point.z + zNear) / (zNear - zFar)
+                ((point.z * (-zFar / (zNear - zFar))) + ((zFar * zNear) / (zFar - zNear))) / point.z
         };
     }
 
@@ -999,5 +1000,26 @@ namespace math
                 {0,(static_cast<T>(2) / dy),0,0},
                 {0,0,-(static_cast<T>(1) / dz),0},
                 {-(right + left) / dx, -(top + bottom) / dy,-zNear / dz,1});
+    }
+
+    /**
+     * Получить матрицу перспективной проекции
+     * @tparam T Тип компонентов
+     * @param fov Угол обзора
+     * @param aspectRatio Пропорции экрана
+     * @param zNear Ближняя грань видимой области (0 для Z значения)
+     * @param zFar Дальняя грань видимой области (1 для Z значения)
+     * @return Матрица 4*4
+     */
+    template <typename T = float>
+    Mat4<T> GetProjectionMatPerspective(T fov, T aspectRatio, T zNear, T zFar)
+    {
+        auto halfFovRad = (fov / 2) * (M_PI / 180.0f);
+
+        return Mat4<T>(
+                {-static_cast<T>(1)/(tanf(halfFovRad) * aspectRatio), 0, 0, 0},
+                {0,-static_cast<T>(1)/tanf(halfFovRad), 0, 0},
+                {0,0,-zFar / (zNear - zFar),1},
+                {0,0,(zFar * zNear) / (zFar - zNear),0});
     }
 }

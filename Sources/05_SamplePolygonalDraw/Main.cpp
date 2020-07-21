@@ -346,7 +346,7 @@ void DrawMesh(gfx::ImageBuffer<RGBQUAD>* frameBuffer,
     for(size_t i = 3; i <= indices.size(); i+=3)
     {
         // Точки треугольника (в координатаъ экрана)
-        std::vector<math::Vec2<int>> triangle;
+        std::vector<math::Vec2<int>> triangleScreen;
         // Точки в NDC-координатах
         std::vector<math::Vec3<float>> triangleNdc;
 
@@ -366,21 +366,21 @@ void DrawMesh(gfx::ImageBuffer<RGBQUAD>* frameBuffer,
 
             // Проекция точки
             auto pp = projectPerspective ?
-                    math::ProjectPerspective(p,45.0f,0.1f,100.0f,aspectRatio) :
+                    math::ProjectPerspective(p,90.0f,0.1f,100.0f,aspectRatio) :
                     math::ProjectOrthogonal(p,-2.0f,2.0f,-2.0f,2.0f,0.1f,100.0f,aspectRatio);
 
             // Перевод в координаты экрана
             auto sp = math::NdcToScreen({pp.x, pp.y}, frameBuffer->getWidth(), frameBuffer->getHeight());
 
-            // Добавить в треугольник (2D)
-            triangle.push_back(sp);
+            // Добавить в треугольник
+            triangleScreen.push_back(sp);
             triangleNdc.push_back(p);
         }
 
         // Получить нормаль для отбрасывания задних граней (инвертируем, поскольку ось Y в координатах экрана инвертирована)
         auto normalForCulling = -math::Normalize(math::Cross(
-                math::Normalize(math::Vec3<float>(triangle[2].x - triangle[0].x,triangle[2].y - triangle[0].y,0.0f)),
-                math::Normalize(math::Vec3<float>(triangle[1].x - triangle[0].x,triangle[1].y - triangle[0].y,0.0f))
+                math::Normalize(math::Vec3<float>(triangleScreen[2].x - triangleScreen[0].x, triangleScreen[2].y - triangleScreen[0].y,0.0f)),
+                math::Normalize(math::Vec3<float>(triangleScreen[1].x - triangleScreen[0].x, triangleScreen[1].y - triangleScreen[0].y,0.0f))
                 ));
 
         // Скалярное произведения вектора к зрителю и нормали треугольника (показывает насколько сильно треугольник повернут к зрителю)
@@ -408,9 +408,9 @@ void DrawMesh(gfx::ImageBuffer<RGBQUAD>* frameBuffer,
             // Написовать треугольник
             gfx::SetTriangle(
                     frameBuffer,
-                    triangle[0].x,triangle[0].y,
-                    triangle[1].x,triangle[1].y,
-                    triangle[2].x,triangle[2].y,
+                    triangleScreen[0].x,triangleScreen[0].y,
+                    triangleScreen[1].x,triangleScreen[1].y,
+                    triangleScreen[2].x,triangleScreen[2].y,
                     {
                         static_cast<unsigned char>(color.b * brightness * 255.0f),
                         static_cast<unsigned char>(color.g * brightness * 255.0f),
