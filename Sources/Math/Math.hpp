@@ -896,6 +896,23 @@ namespace math
     }
 
     /**
+     * Получить матрицу поворота вокруг всех осей (4x4)
+     * @tparam T Тип компонентов
+     * @param angles Углы (в градусах)
+     * @return Матрица 4*4
+     */
+    template <typename T = float>
+    Mat4<T> GetRotationMat4(const Vec3<T>& angles)
+    {
+        auto rotMat3 = GetRotationMat(angles);
+        return math::Mat4<T>(
+                {rotMat3[0][0],rotMat3[0][1],rotMat3[0][2],0},
+                {rotMat3[1][0],rotMat3[1][1],rotMat3[1][2],0},
+                {rotMat3[2][0],rotMat3[2][1],rotMat3[2][2],0},
+                {0,0,0,1});
+    }
+
+    /**
      * Получить матрицу масштабирования
      * @tparam T Тип компонентов
      * @param scale Масштаб по всем осям
@@ -908,20 +925,36 @@ namespace math
     }
 
     /**
-     * Перевод координат точки из клип-пространства в пространство экрана
+     * Получить матрицу масштабирования (4x4)
      * @tparam T Тип компонентов
-     * @param point Исходнач точка в клип-пространстве
-     * @param width Ширина экрана в пикселях
-     * @param height Высота экрана в пикселях
-     * @return Точка в координатах экрана (верхний левый угол - начало координат)
+     * @param scale Масштаб по всем осям
+     * @return Матрица 4*4
      */
     template <typename T = float>
-    Vec2<int> NdcToScreen(const Vec2<T>& point, unsigned width, unsigned height)
+    Mat4<T> GetScaleMat4(const Vec3<T>& scale)
     {
-        return {
-            static_cast<int>(((point.x + 1.0f)/2.0f) * (width-1)),
-            static_cast<int>(((-point.y + 1.0f)/2.0f) * (height-1)),
-        };
+        auto scaleMat3 = GetScaleMat(scale);
+        return math::Mat4<T>(
+                {scaleMat3[0][0], scaleMat3[0][1], scaleMat3[0][2], 0},
+                {scaleMat3[1][0], scaleMat3[1][1], scaleMat3[1][2], 0},
+                {scaleMat3[2][0], scaleMat3[2][1], scaleMat3[2][2], 0},
+                {0,0,0,1});
+    }
+
+    /**
+     * Получить матрицу смещения (4x4)
+     * @tparam T Тип компонентов
+     * @param v Вектор смещения
+     * @return Матрица 4*4
+     */
+    template <typename T = float>
+    Mat4<T> GetTranslationMat4(const Vec3<T>& v)
+    {
+        return math::Mat4<T>(
+                {1,0,0,0},
+                {0,1,0,0},
+                {0,0,1,0},
+                {v.x,v.y,v.z,1});
     }
 
     /**
@@ -1021,5 +1054,22 @@ namespace math
                 {0,-static_cast<T>(1)/tanf(halfFovRad), 0, 0},
                 {0,0,-zFar / (zNear - zFar),1},
                 {0,0,(zFar * zNear) / (zFar - zNear),0});
+    }
+
+    /**
+     * Перевод координат точки из клип-пространства в пространство экрана
+     * @tparam T Тип компонентов
+     * @param point Исходнач точка в клип-пространстве
+     * @param width Ширина экрана в пикселях
+     * @param height Высота экрана в пикселях
+     * @return Точка в координатах экрана (верхний левый угол - начало координат)
+     */
+    template <typename T = float>
+    Vec2<int> NdcToScreen(const Vec2<T>& point, unsigned width, unsigned height)
+    {
+        return {
+                static_cast<int>(((point.x + 1.0f)/2.0f) * (width-1)),
+                static_cast<int>(((-point.y + 1.0f)/2.0f) * (height-1)),
+        };
     }
 }
