@@ -5,7 +5,9 @@
 #include <Math.hpp>
 #include <Gfx.hpp>
 #include <Timer.hpp>
-#include <utility>
+
+#include "Skeleton.hpp"
+
 
 /**
  * Коды ошибок
@@ -52,76 +54,16 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
 void PresentFrame(void *pixels, int width, int height, HWND hWnd);
 
 /**
- * Данный индекс означает отсутствие родителя у сустава
+ * Простое описание вершины
+ * В отличии от реальных примеров, здесь отсутствуют веса и вершина может принадлежать только одной кости
  */
-#define JOINT_NO_PARENT 9999
-
-/**
- * Структура описывающаяя "сустав"
- * Каждый сустав обладает своим набором точек и своей трансформацией относительно родительского сустава
- */
-struct Joint
+struct Vertex
 {
-    /// Набор точек принадлежащих суставу (точки задаются в ПРОСТРАНСТВЕ СУСТАВА)
-    std::vector<math::Vec4<float>> points;
-    /// Матрица локальной трансформации относительно родителя
-    math::Mat4<float> offset = math::Mat4<float>(1.0f);
-    /// Матрица полной трансформации сустава
-    math::Mat4<float> transformation = math::Mat4<float>(1.0f);
-    /// Индекс родительского сустава
-    size_t parentId = JOINT_NO_PARENT;
+    /// Положение в пространстве
+    math::Vec3<float> position;
 
-    /**
-     * Конструктор
-     * @param pointsIn Набор точек прикрепленных к суставу
-     * @param offsetIn Трансформация сустава относительно родителя
-     * @param parent Индекс родительского сустава
-     */
-    Joint(std::vector<math::Vec4<float>> pointsIn, const math::Mat4<float>& offsetIn, size_t parent = JOINT_NO_PARENT):
-            points(std::move(pointsIn)),offset(offsetIn),parentId(parent)
-    {}
-
-    /**
-     * Получить указатель на родительский узел (сустав)
-     * @param allJoints Массив всех суставов
-     * @return Указатель на объект структуры Joint
-     */
-    const Joint* getParent(const std::vector<Joint>& allJoints) const
-    {
-        if(parentId == JOINT_NO_PARENT || parentId > allJoints.size() - 1) return nullptr;
-        return &(allJoints[parentId]);
-    }
-
-    /**
-     * Получить массив дочерних узлов (суставов)
-     * @param allJoints Массив всех суставов
-     * @return Массив дочерних узлов
-     */
-    std::vector<const Joint*> getChildren(const std::vector<Joint>& allJoints) const
-    {
-        std::vector<const Joint*> children;
-
-        int currentIndex = -1;
-
-        for(size_t i = 0; i < allJoints.size(); i++)
-        {
-            if(&(allJoints[i]) == this){
-                currentIndex = i;
-            }
-        }
-
-        if(currentIndex >= 0)
-        {
-            for(const auto& joint : allJoints)
-            {
-                if(joint.parentId == static_cast<size_t>(currentIndex)){
-                    children.push_back(&joint);
-                }
-            }
-        }
-
-        return children;
-    }
+    /// Индек кости, к которой привязана вершины
+    size_t boneId = 0;
 };
 
 /**
@@ -201,31 +143,35 @@ int main(int argc, char* argv[])
         float angleSpeed = 0.03f;
 
         // Матрица проекции
-        math::Mat4<float> mProjection = math::GetProjectionMatOrthogonal(-2.0f,2.0f,-2.0f,2.0f,0.1f,100.0f,aspectRatio);
+        math::Mat4<float> mProjection = math::GetProjectionMatOrthogonal(-8.0f,8.0f,-8.0f,8.0f,0.1f,100.0f,aspectRatio);
 
-        // Массив суставов
-        std::vector<Joint> joints;
+        // Набор вершин
+        std::vector<Vertex> vertices = {
+                // Первый квдрат принадлежит корневой кости
+                {{-1.0f,-1.0f,0.0f},0},
+                {{-1.0f,1.0f,0.0f},0},
+                {{1.0f,1.0f,0.0f},0},
+                {{1.0f,-1.0f,0.0f},0},
 
-        // Добавить корневой сустав
-        joints.push_back({
-                {{0.0f,0.0f,0.0f,1.0f},{0.0f,1.0f,0.0f,1.0f}},
-                math::GetTranslationMat4({0.0f,0.0f,0.0f}),
-                JOINT_NO_PARENT
-        });
+                // 2-й квадрат принадлежит кости 1
+                {{-1.0f,1.5f,0.0f},1},
+                {{-1.0f,3.5f,0.0f},1},
+                {{1.0f,3.5f,0.0f},1},
+                {{1.0f,1.5f,0.0f},1},
 
-        // Добавляем дочерний сустав для корневого (со смещением {0.0f,1.0f,0.0f})
-        joints.push_back({
-                {{0.0f,0.0f,0.0f,1.0f},{0.0f,0.5f,0.0f,1.0f}},
-                math::GetTranslationMat4({0.0f,1.0f,0.0f}),
-                0
-        });
+                // 3-й квадрат принадлежит кости 2
+                {{-1.0f,4.0f,0.0f},2},
+                {{-1.0f,6.0f,0.0f},2},
+                {{1.0f,6.0f,0.0f},2},
+                {{1.0f,4.0f,0.0f},2},
+        };
 
-        // Добавляем дочерний сустав для второго (со смещением {0.0f,0.5f,0.0f})
-        joints.push_back({
-                {{0.0f,0.0f,0.0f,1.0f},{0.0f,0.25f,0.0f,1.0f}},
-                math::GetTranslationMat4({0.0f,0.5f,0.0f}),
-                1
-        });
+        // Инициализация скелета (скелет из 3 суставов/костей)
+        Skeleton skeleton(3);
+        skeleton.getRootBone()
+        ->addChildBone(1,math::GetTranslationMat4({0.0f,2.5f,0.0f}))
+        ->addChildBone(2,math::GetTranslationMat4({0.0f,2.5f,0.0f}));
+
 
         /** MAIN LOOP **/
 
@@ -257,60 +203,79 @@ int main(int argc, char* argv[])
                 SetWindowTextA(_hwnd, fps.c_str());
             }
 
-            // Точки после преобразований
+            /// А Н И М А Ц И Я
+
+            // Приращение угла поворота
+            rotationAngle += (angleSpeed * _timer->getDelta());
+
+            // Повороты суставов скелета
+            skeleton.getRootBone()->setTransformation(math::GetRotationMat4({0.0f,0.0f,rotationAngle}));
+            skeleton.getRootBone()->getChildrenBones()->back().setTransformation(math::GetRotationMat4({0.0f,0.0f,rotationAngle}));
+            skeleton.getRootBone()->getChildrenBones()->back().getChildrenBones()->back().setTransformation(math::GetRotationMat4({0.0f,0.0f,rotationAngle}));
+
+            /// D R A W
+
+            // Точки после преобразований (2D)
             std::vector<math::Vec2<float>> pointsTransformed;
 
-            /// U P D A T E
+            // Дополнительные точки (для отметки костей)
+            std::vector<math::Vec2<float>> bonesPointsTransformed;
+
+            // Трансформация вершин
+            // В данном цикле проходим по вершинам и применям к ним трансформации соответствующих костей
+            for(const auto& v : vertices)
             {
-                // Приращение угла поворота
-                rotationAngle += (angleSpeed * _timer->getDelta());
+                auto vt = mProjection * skeleton.getFinalBoneTransforms()[v.boneId] * math::Vec4<float>({v.position.x,v.position.y,v.position.z,1.0f});
+                pointsTransformed.emplace_back(vt.x,vt.y);
+            }
 
-                // Поворот суставов
-                joints[0].transformation = joints[0].offset * math::GetRotationMat4({0.0f,0.0f,rotationAngle});
-                joints[1].transformation = joints[1].offset * math::GetRotationMat4({0.0f,0.0f,rotationAngle * 2});
-                joints[2].transformation = joints[2].offset * math::GetRotationMat4({0.0f,0.0f,rotationAngle * 4});
+            // В данном цикле просто добавляем точки для дальнейшей индикации костей
+            // Для этого используем нулевые точки в пространстве кости, и соостветствующие матрицы (fromBoneSpace - true)
+            for(const auto& t : skeleton.getFinalBoneTransforms(true))
+            {
+                auto vt = mProjection * t * math::Vec4<float>({0.0f,0.0f,0.0f,1.0f});
+                bonesPointsTransformed.emplace_back(vt.x,vt.y);
+            }
 
-                // Проход по всем суставам
-                for(auto& joint : joints)
+
+            // Рисование примитивов по преобразовнным точкам
+            size_t pointsPerPrimitive = 4;
+            for(size_t i = 0; i < pointsTransformed.size(); i+=pointsPerPrimitive)
+            {
+                for(size_t j = i; j < i + pointsPerPrimitive; j++)
                 {
-                    // Текущая трансформация
-                    math::Mat4<float> currentTransform = joint.transformation;
+                    // Индексы двух точек
+                    size_t i0 = j;
+                    size_t i1 = ((j+1) > (i+pointsPerPrimitive-1) ? i : j+1);
 
-                    // К матрице текущей трансформации применяются трансформации родителей, родителей родителей и т.д (иерархически)
-                    const Joint* currentJoint = &joint;
-                    while(currentJoint->parentId != JOINT_NO_PARENT){
-                        currentJoint = currentJoint->getParent(joints);
-                        currentTransform = currentJoint->transformation * currentTransform;
-                    }
+                    // Перевести точки в координаты экрана
+                    auto ps0 = math::NdcToScreen(pointsTransformed[i0],frameBuffer.getWidth(),frameBuffer.getHeight());
+                    auto ps1 = math::NdcToScreen(pointsTransformed[i1],frameBuffer.getWidth(),frameBuffer.getHeight());
 
-                    // Применяем трансформации и проекцию ко всем точкам
-                    for(const auto& p : joint.points)
-                    {
-                        auto pTransformed = mProjection * currentTransform * p;
-                        pointsTransformed.emplace_back(pTransformed.x,pTransformed.y);
-                    }
+                    // Нарисовать линию соединяющую точки
+                    gfx::SetLine(&frameBuffer,ps0.x,ps0.y,ps1.x,ps1.y,{0,255,0});
                 }
             }
 
-            /// D R A W
+            // Индикация костей
+            for(size_t i = 0; i < bonesPointsTransformed.size(); i++)
             {
-                // Пройтись по всем трансформированным точкам
-                for(size_t i = 0; i < pointsTransformed.size(); i++)
+                // Индексы двух точек
+                size_t i0 = i;
+                size_t i1 = i+1;
+
+                if(i1 < bonesPointsTransformed.size())
                 {
-                    // Индексы двух точек
-                    size_t i0 = i;
-                    size_t i1 = i+1;
+                    // Перевести точки в координаты экрана
+                    auto ps0 = math::NdcToScreen(bonesPointsTransformed[i0],frameBuffer.getWidth(),frameBuffer.getHeight());
+                    auto ps1 = math::NdcToScreen(bonesPointsTransformed[i1],frameBuffer.getWidth(),frameBuffer.getHeight());
 
-                    if(i+1 < pointsTransformed.size())
-                    {
-                        // Перевести точки в координаты экрана
-                        auto ps0 = math::NdcToScreen(pointsTransformed[i0],frameBuffer.getWidth(),frameBuffer.getHeight());
-                        auto ps1 = math::NdcToScreen(pointsTransformed[i1],frameBuffer.getWidth(),frameBuffer.getHeight());
+                    // Круги в местах точек
+                    if(i == 0) gfx::SetCircle(&frameBuffer,ps0.x,ps0.y,5,{0,0,255});
+                    gfx::SetCircle(&frameBuffer,ps1.x,ps1.y,5,{0,0,255});
 
-                        // Нарисовать линию соединяющую точки
-                        gfx::SetLine(&frameBuffer,ps0.x,ps0.y,ps1.x,ps1.y,{0,255,0});
-                        gfx::SetCircle(&frameBuffer,ps0.x,ps0.y,5,{0,0,255});
-                    }
+                    // Нарисовать линию соединяющую точки
+                    gfx::SetLine(&frameBuffer,ps0.x,ps0.y,ps1.x,ps1.y,{0,0,255});
                 }
             }
 
