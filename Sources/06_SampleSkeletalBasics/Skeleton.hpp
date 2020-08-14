@@ -47,7 +47,7 @@ class Skeleton
             else
             {
                 totalBindTransform_ = this->localBindTransform_;
-                totalTransform_ = this->localTransform_;
+                totalTransform_ = this->localBindTransform_ * this->localTransform_;
             }
 
             // Если есть указатель на объект скелета и индекс валиден
