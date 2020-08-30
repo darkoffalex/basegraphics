@@ -209,9 +209,9 @@ int main(int argc, char* argv[])
             rotationAngle += (angleSpeed * _timer->getDelta());
 
             // Повороты суставов скелета
-            skeleton.getRootBone()->setTransformation(math::GetRotationMat4({0.0f,0.0f,rotationAngle}));
-            skeleton.getRootBone()->getChildrenBones()->back().setTransformation(math::GetRotationMat4({0.0f,0.0f,rotationAngle}));
-            skeleton.getRootBone()->getChildrenBones()->back().getChildrenBones()->back().setTransformation(math::GetRotationMat4({0.0f,0.0f,rotationAngle}));
+            skeleton.getRootBone()->setLocalTransform(math::GetRotationMat4({0.0f,0.0f,rotationAngle}));
+            skeleton.getRootBone()->getChildrenBones().back()->setLocalTransform(math::GetRotationMat4({0.0f,0.0f,rotationAngle}));
+            skeleton.getRootBone()->getChildrenBones().back()->getChildrenBones().back()->setLocalTransform(math::GetRotationMat4({0.0f,0.0f,rotationAngle}));
 
             /// D R A W
 

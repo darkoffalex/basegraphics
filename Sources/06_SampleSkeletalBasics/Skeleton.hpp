@@ -1,69 +1,113 @@
+/**
+ * Класс скелета. Используется для скелетной анимации одиночного меша
+ * Copyright (C) 2020 by Alex "DarkWolf" Nem - https://github.com/darkoffalex
+ */
+
 #pragma once
 
 #include <vector>
+#include <functional>
+#include <memory>
+
 #include <Math.hpp>
 
+/**
+ * Класс скелета
+ */
 class Skeleton
 {
+public:
+
+    /**
+     * Класс кости скелета (внутренний класс скелета)
+     */
     class Bone
     {
+    public:
+        /// Флаги вычисления матриц
+        enum CalcFlags
+        {
+            eNone = (0),
+            eFullTransform = (1u << 0u),
+            eBindTransform = (1u << 1u),
+            eInverseBindTransform = (1u << 2u),
+        };
+
     private:
+        /// Открыть доступ для дружественных классов
+        friend class Skeleton;
+
         /// Указатель на скелет
         Skeleton* pSkeleton_;
         /// Индекс кости в линейном массиве
         size_t index_;
-        /// Указатель на родительскую кость
-        Bone* pParentBone_;
-        /// Массив дочерних костей
-        std::vector<Bone> childrenBones_;
 
-        /// Смещение (расположение) относительно родитеской кости (можно считать это initial-положением)
+        /// Указатель на родительскую кость
+        Skeleton::Bone* pParentBone_;
+        /// Массив указателей на дочерние кости
+        std::vector<std::shared_ptr<Skeleton::Bone>> childrenBones_;
+
+        /// Смещение (расположение) относительно родительской кости (можно считать это initial-положением)
         math::Mat4<float> localBindTransform_;
-        /// Локальная трансформация (та трансформация, которая может назначаться, например "поворот руки на n градусов")
+        /// Локальная трансформация относительно bind (та трансформация, которая может назначаться во время анимации)
         math::Mat4<float> localTransform_;
 
-        /// Результируюшая трансформация кости с учетом локальной и учетом трансформаций родительских костей
-        /// Служит для перевода точек из пространства кости в пространство модели (с учетом локальной трансформации)
+        /// Результирующая трансформация кости с учетом локальной трансформации и результирующий трансформаций родительских костей
+        /// Данная трансформация может быть применена к точкам находящимся В ПРОСТРАНСТВЕ КОСТИ
         math::Mat4<float> totalTransform_;
-
-        /// Результирующая трансформация кости БЕЗ учета локальной, но с учетом трансформаций родительских костей
-        /// В последстивии инвертируется для перевода точек из пространства модели в пространство кости (без учета локальной трансформации)
+        /// Результирующая трансформация кости БЕЗ учета задаваемой, но с учетом bind-трансформаций родительских костей
         math::Mat4<float> totalBindTransform_;
+        /// Инвертированная bind матрица может быть использована для перехода в пространство кости ИЗ ПРОСТРАНСТВА МОДЕЛИ
+        math::Mat4<float> totalBindTransformInverse_;
 
         /**
-         * Подсчет итоговым матриц трансформации для ветки начиная с текущей кости
+         * Рекурсивное вычисление матриц для текущей кости и всех дочерних её костей
+         * @param callUpdateCallbackFunction Вызывать функцию обратного вызова установленную к скелета
+         * @param calcFlags Опции вычисления матриц (какие матрицы считать)
          */
-        void calculateBranch()
+        void calculateBranch(bool callUpdateCallbackFunction = true, unsigned calcFlags = CalcFlags::eFullTransform | CalcFlags::eBindTransform | CalcFlags::eInverseBindTransform)
         {
             // Если у кости есть родительская кость
             if(pParentBone_ != nullptr)
             {
-                // Общее смещщение кости - точка смещается на локальное смещение, затем на общее родитеское смещение
-                totalBindTransform_ = pParentBone_->totalBindTransform_ * this->localBindTransform_;
-                // Общая трансформация кости - точка смещается на локальную (анимированную) трансформацию, затем на начальнон смещение кости, затем на родительскую общую трансформацию
-                totalTransform_ = pParentBone_->totalTransform_ * this->localBindTransform_ * this->localTransform_;
+                // Общая initial (bind) трансформация для кости учитывает текущую и родительскую (что в свою очередь справедливо и для родительской)
+                if(calcFlags & CalcFlags::eBindTransform)
+                    totalBindTransform_ = pParentBone_->totalBindTransform_ * this->localBindTransform_;
+
+                // Общая полная (с учетом задаваемой) трансформация кости (смещаем на localTransform_, затем на initial, затем на общую родительскую трансформацию)
+                if(calcFlags & CalcFlags::eFullTransform)
+                    totalTransform_ = pParentBone_->totalTransform_ * this->localBindTransform_ * this->localTransform_;
             }
-            // Если нет родительской кости - считать кость корневой
+                // Если нет родительской кости - считать кость корневой
             else
             {
-                totalBindTransform_ = this->localBindTransform_;
-                totalTransform_ = this->localBindTransform_ * this->localTransform_;
+                if(calcFlags & CalcFlags::eBindTransform)
+                    totalBindTransform_ = this->localBindTransform_;
+
+                if(calcFlags & CalcFlags::eFullTransform)
+                    totalTransform_ = this->localBindTransform_ * this->localTransform_;
             }
 
-            // Если есть указатель на объект скелета и индекс валиден
-            if(pSkeleton_ != nullptr && index_ < pSkeleton_->finalTransformations_.size())
+            // Инвертированная матрица bind трансформации
+            if(calcFlags & CalcFlags::eInverseBindTransform)
+                totalBindTransformInverse_ = math::Inverse(totalBindTransform_);
+
+            // Если есть указатель на объект скелета и индекс корректный
+            if(pSkeleton_ != nullptr && index_ < pSkeleton_->modelSpaceFinalTransforms_.size())
             {
-                // Итоговая матрица трансформации для точек в простнастве модели
-                pSkeleton_->finalTransformations_[index_] = totalTransform_ * math::Inverse(totalBindTransform_);
+                // Итоговая матрица трансформации для точек находящихся в пространстве модели
+                // Поскольку общая трансформация кости работает с вершинами находящимися в пространстве модели,
+                // они в начале должны быть переведены в пространство кости.
+                pSkeleton_->modelSpaceFinalTransforms_[index_] = pSkeleton_->globalInverseTransform_ * totalTransform_ * totalBindTransformInverse_;
 
-                // Итоговая матрица трансформации для точек в пространстве кости
-                pSkeleton_->finalTransformationFromBoneSpace_[index_] = totalTransform_;
+                // Для ситуаций, если вершины задаются сразу в пространстве кости
+                pSkeleton_->boneSpaceFinalTransforms_[index_] = pSkeleton_->globalInverseTransform_ * totalTransform_;
             }
 
-            // Рекрсивно выполнить для дочерних элементов (если они есть)
+            // Рекурсивно выполнить для дочерних элементов (если они есть)
             if(!this->childrenBones_.empty()){
                 for(auto& childBone : this->childrenBones_){
-                    childBone.calculateBranch();
+                    childBone->calculateBranch(false, calcFlags);
                 }
             }
         }
@@ -79,14 +123,15 @@ class Skeleton
                 localBindTransform_(math::Mat4<float>(1.0f)),
                 localTransform_(math::Mat4<float>(1.0f)),
                 totalTransform_(math::Mat4<float>(1.0f)),
-                totalBindTransform_(math::Mat4<float>(1.0f)){};
+                totalBindTransform_(math::Mat4<float>(1.0f)),
+                totalBindTransformInverse_(math::Mat4<float>(1.0f)){}
 
         /**
          * Основной конструктор кости
          * @param pSkeleton Указатель на объект скелета
          * @param index Индекс кости в линейном массиве трансформаций
          * @param parentBone Указатель на родительскую кость
-         * @param localBindTransform Смещение (расположение) относительно родитеской кости
+         * @param localBindTransform Смещение (расположение) относительно родительской кости
          * @param localTransform  Локальная трансформация (та трансформация, которая может назначаться, например "поворот руки на n градусов")
          */
         explicit Bone(Skeleton* pSkeleton,
@@ -97,184 +142,239 @@ class Skeleton
                 pSkeleton_(pSkeleton),
                 pParentBone_(parentBone),
                 localBindTransform_(localBindTransform),
-                localTransform_(localTransform)
+                localTransform_(localTransform),
+                totalTransform_(math::Mat4<float>(1.0f)),
+                totalBindTransform_(math::Mat4<float>(1.0f)),
+                totalBindTransformInverse_(math::Mat4<float>(1.0f))
         {
-            calculateBranch();
+            // Вычисление матриц кости
+            calculateBranch(CalcFlags::eFullTransform|CalcFlags::eBindTransform|CalcFlags::eInverseBindTransform);
         }
 
         /**
-         * Конструктор перемещения
-         * @param other R-value ссылка на другой объект
-         * @details Нельзя копировать объект, но можно обменяться с ним ресурсом
+         * Деструктор по умолчанию
          */
-        Bone(Bone&& other) noexcept : Bone()
-        {
-            std::swap(pSkeleton_,other.pSkeleton_);
-            std::swap(index_,other.index_);
-            std::swap(pParentBone_,other.pParentBone_);
-            std::swap(localBindTransform_,other.localBindTransform_);
-            std::swap(localTransform_,other.localTransform_);
-            std::swap(totalTransform_,other.totalTransform_);
-            std::swap(totalBindTransform_,other.totalBindTransform_);
-            childrenBones_ = std::move(other.childrenBones_);
-        }
-
-        /**
-         * Перемещение через присваивание
-         * @param other R-value ссылка на другой объект
-         * @return Ссылка на текущий объект
-         */
-        Bone& operator=(Bone&& other) noexcept
-        {
-            if (this == &other) return *this;
-
-            index_ = 0;
-            pSkeleton_ = nullptr;
-            pParentBone_ = nullptr;
-            childrenBones_.clear();
-
-            std::swap(pSkeleton_,other.pSkeleton_);
-            std::swap(index_,other.index_);
-            std::swap(pParentBone_,other.pParentBone_);
-            std::swap(localBindTransform_,other.localBindTransform_);
-            std::swap(localTransform_,other.localTransform_);
-            std::swap(totalTransform_,other.totalTransform_);
-            std::swap(totalBindTransform_,other.totalBindTransform_);
-            childrenBones_ = std::move(other.childrenBones_);
-
-            return *this;
-        }
+        ~Bone() = default;
 
         /**
          * Добавление дочерней кости
          * @param index Индекс
          * @param localBindTransform Изначальная трансформация
          * @param localTransform Задаваемая трансформация
+         * @return Указатель на добавленную кость
          */
-        Bone* addChildBone(size_t index,
-                const math::Mat4<float>& localBindTransform = math::Mat4<float>(1.0f),
-                const math::Mat4<float>& localTransform = math::Mat4<float>(1.0f))
+        std::shared_ptr<Bone> addChildBone(size_t index,
+                                           const math::Mat4<float>& localBindTransform,
+                                           const math::Mat4<float>& localTransform = math::Mat4<float>(1.0f))
         {
-            this->childrenBones_.emplace_back(this->pSkeleton_,index,this,localBindTransform,localTransform);
-            return &(this->childrenBones_.back());
+            // Создать дочернюю кость
+            std::shared_ptr<Bone> child(new Bone(this->pSkeleton_,index,this,localBindTransform,localTransform));
+            // Добавить в массив дочерних костей
+            this->childrenBones_.push_back(child);
+            // Добавить в общий линейный массив по указанному индексу
+            if(this->pSkeleton_ != nullptr) this->pSkeleton_->bones_[index] = child;
+            // Вернуть указатель
+            return child;
         }
 
         /**
-         * Задать трансформацию текущей кости (и всей дальнейшей ветви)
-         * @param localTransform Локальная трансформация
+         * Установить локальную (анимируемую) трансформацию
+         * @param transform Матрица 4*4
+         * @param recalculateBranch Пересчитать ветвь
          */
-        void setTransformation(const math::Mat4<float>& localTransform)
+        void setLocalTransform(const math::Mat4<float>& transform, bool recalculateBranch = true)
         {
-            this->localTransform_ = localTransform;
-            this->calculateBranch();
+            this->localTransform_ = transform;
+            if(recalculateBranch) this->calculateBranch(true, CalcFlags::eFullTransform);
         }
 
         /**
-         * Задать локальную изначальную трансформацию кости (и всей дальнейшей вевти)
-         * @param localBindTransform Смещение (расположение) относительно родитеской кости
+         * Установить изначальную (initial) трансформацию кости относительно родителя
+         * @param transform Матрица 4*4
+         * @param recalculateBranch Пересчитать ветвь
          */
-        void setBindTransformation(const math::Mat4<float>& localBindTransform)
+        void setLocalBindTransform(const math::Mat4<float>& transform, bool recalculateBranch = true)
         {
-            this->localBindTransform_ = localBindTransform;
-            this->calculateBranch();
+            this->localBindTransform_ = transform;
+            if(recalculateBranch) this->calculateBranch(true, CalcFlags::eBindTransform|CalcFlags::eInverseBindTransform);
         }
 
         /**
-         * Задать изначальную локальную трансформацию и дополнитульную (анимированную) локальную трансформацию
-         * @param localBindTransform Смещение (расположение) относительно родитеской кости
-         * @param localTransform Локальная добавочная трансформация
+         * Установить изначальную (initial, bind) и добавочную (animated) трансформацию
+         * @param localBind Матрица 4*4
+         * @param local Матрица 4*4
+         * @param recalculateBranch Пересчитать ветвь
          */
-        void setTransformations(const math::Mat4<float>& localBindTransform, const math::Mat4<float>& localTransform)
+        void setTransformations(const math::Mat4<float>& localBind, const math::Mat4<float>& local, bool recalculateBranch = true)
         {
-            this->localBindTransform_ = localBindTransform;
-            this->localTransform_ = localTransform;
-            this->calculateBranch();
+            this->localBindTransform_ = localBind;
+            this->localTransform_ = local;
+            if(recalculateBranch) this->calculateBranch(true, CalcFlags::eFullTransform|CalcFlags::eBindTransform|CalcFlags::eInverseBindTransform);
         }
 
         /**
-         * Получить указатель на массив дочерних костей
-         * @return Указатель на массив ксотей
+         * Получить массив дочерних костей
+         * @return Ссылка на массив указателей
          */
-        std::vector<Bone>* getChildrenBones()
+        std::vector<std::shared_ptr<Bone>>& getChildrenBones()
         {
-            return &childrenBones_;
+            return this->childrenBones_;
+        }
+
+        /**
+         * Получить указатель на родительскую кость
+         * @return Указатель
+         */
+        Bone* getParentBone()
+        {
+            return this->pParentBone_;
+        }
+
+        /**
+         * Получить индекс кости
+         * @return Целое положительное число
+         */
+        size_t getIndex()
+        {
+            return index_;
         }
     };
 
+    /**
+     * Smart-pointer объекта скелетной кости
+     */
+    typedef std::shared_ptr<Bone> BonePtr;
+
+    /**
+     * Состояние анимации
+     */
+    enum struct AnimationState
+    {
+        eStopped,
+        ePlaying
+    };
+
 private:
-    /// Массив итоговых трансформаций
-    std::vector<math::Mat4<float>> finalTransformations_;
+    /// Открыть доступ для класса Mesh
+    friend class Mesh;
 
-    /// Массив трансформаций без инвертированной bind матрицы
-    std::vector<math::Mat4<float>> finalTransformationFromBoneSpace_;
+    /// Массив итоговых трансформаций для вершин в пространстве модели
+    std::vector<math::Mat4<float>> modelSpaceFinalTransforms_;
+    /// Массив итоговых трансформаций для вершин в пространстве костей
+    std::vector<math::Mat4<float>> boneSpaceFinalTransforms_;
+    /// Матрица глобальной инверсии (на случай если в программе для моделирования объекту задавалась глобальная трансформация)
+    math::Mat4<float> globalInverseTransform_;
 
+    /// Массив указателей на кости для доступа по индексам
+    std::vector<BonePtr> bones_;
     /// Корневая кость
-    Bone rootBone_;
+    BonePtr rootBone_;
 
 public:
     /**
      * Конструктор по умолчанию
+     * Изначально у скелета всегда есть одна кость
      */
-    Skeleton() = default;
+    Skeleton():
+            modelSpaceFinalTransforms_(1),
+            boneSpaceFinalTransforms_(1),
+            globalInverseTransform_(math::Mat4<float>(1.0f)),
+            bones_(1)
+    {
+        // Создать корневую кость
+        rootBone_ = std::make_shared<Bone>(this,0,nullptr,math::Mat4<float>(1),math::Mat4<float>(1));
+        // Нулевая кость в линейном массиве указателей
+        bones_[0] = rootBone_;
+    }
 
     /**
      * Основной конструктор
      * @param boneTotalCount Общее количество костей
+     * @param updateCallback Функция обратного вызова при пересчете матриц
      */
-    explicit Skeleton(size_t boneTotalCount)
+    explicit Skeleton(size_t boneTotalCount):
+            globalInverseTransform_(math::Mat4<float>(1.0f))
     {
-        // Резервируем массив нужным количеством элементов
-        finalTransformations_.resize(boneTotalCount);
-        finalTransformationFromBoneSpace_.resize(boneTotalCount);
+        // Изначально у скелета есть как минимум 1 кость
+        modelSpaceFinalTransforms_.resize(std::max<size_t>(1,boneTotalCount));
+        boneSpaceFinalTransforms_.resize(std::max<size_t>(1,boneTotalCount));
+        bones_.resize(std::max<size_t>(1,boneTotalCount));
 
-        // Создать корневую кость скелета
-        rootBone_ = Bone(this,0, nullptr);
+        // Создать корневую кость
+        rootBone_ = std::make_shared<Bone>(this,0,nullptr,math::Mat4<float>(1),math::Mat4<float>(1));
+        // Нулевая кость в линейном массиве указателей
+        bones_[0] = rootBone_;
     }
 
     /**
-     * Конструктор перемещения
-     * @param other R-value ссылка на другой объект
-     * @details Нельзя копировать объект, но можно обменяться с ним ресурсом
+     * Деструктор по умолчанию
      */
-    Skeleton(Skeleton&& other) noexcept : Skeleton()
-    {
-        finalTransformations_ = std::move(other.finalTransformations_);
-        rootBone_ = std::move(other.rootBone_);
-    }
-
-    /**
-     * Перемещение через присваивание
-     * @param other R-value ссылка на другой объект
-     * @return Ссылка на текущий объект
-     */
-    Skeleton& operator=(Skeleton&& other) noexcept
-    {
-        if (this == &other) return *this;
-
-        //TODO: Желательно очистить данные перед обменом
-
-        finalTransformations_ = std::move(other.finalTransformations_);
-        rootBone_ = std::move(other.rootBone_);
-
-        return *this;
-    }
+    ~Skeleton() = default;
 
     /**
      * Получить корневую кость
      * @return Указатель на объект кости
      */
-    Bone* getRootBone()
+    BonePtr getRootBone()
     {
-        return &rootBone_;
+        return rootBone_;
+    }
+
+    void setGlobalInverseTransform(const math::Mat4<float>& m)
+    {
+        this->globalInverseTransform_ = m;
+        this->getRootBone()->calculateBranch(true,Bone::CalcFlags::eNone);
     }
 
     /**
      * Получить массив итоговых трансформаций костей
      * @param fromBoneSpace Если точки заданы в пространстве кости
-     * @return Массив матриц
+     * @return Ссылка на массив матриц
      */
-    const std::vector<math::Mat4<float>>& getFinalBoneTransforms(bool fromBoneSpace = false)
+    const std::vector<math::Mat4<float>>& getFinalBoneTransforms(bool fromBoneSpace = false) const
     {
-        return fromBoneSpace ? finalTransformationFromBoneSpace_ : finalTransformations_;
+        return fromBoneSpace ? boneSpaceFinalTransforms_ : modelSpaceFinalTransforms_;
+    }
+
+    /**
+     * Получить общее кол-во костей
+     * @return Целое положительное число
+     */
+    size_t getBonesCount() const
+    {
+        return bones_.size();
+    }
+
+    /**
+     * Получить размер массива трансформаций в байтах
+     * @return Целое положительное число
+     */
+    size_t getTransformsDataSize() const
+    {
+        return sizeof(math::Mat4<float>) * this->modelSpaceFinalTransforms_.size();
+    }
+
+    /**
+     * Получить линейный массив костей
+     * @return Массив указателей на кости
+     */
+    const std::vector<BonePtr>& getBones()
+    {
+        return bones_;
+    }
+
+    /**
+     * Получить указатель на кость по индексу
+     * @param index Индекс
+     * @return Smart-pointer кости
+     */
+    BonePtr getBoneByIndex(size_t index)
+    {
+        return bones_[index];
     }
 };
+
+/**
+ * Smart-unique-pointer объекта скелета
+ */
+typedef std::unique_ptr<Skeleton> UniqueSkeleton;

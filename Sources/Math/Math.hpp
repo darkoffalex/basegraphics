@@ -892,7 +892,7 @@ namespace math
     template <typename T = float>
     Mat3<T> GetRotationMat(const Vec3<T>& angles)
     {
-        return  GetRotationMatY(angles.y) * GetRotationMatX(angles.x) * GetRotationMatZ(angles.z);
+        return GetRotationMatY<T>(angles.y) * GetRotationMatX<T>(angles.x) * GetRotationMatZ<T>(angles.z);
     }
 
     /**
@@ -904,7 +904,7 @@ namespace math
     template <typename T = float>
     Mat4<T> GetRotationMat4(const Vec3<T>& angles)
     {
-        auto rotMat3 = GetRotationMat(angles);
+        auto rotMat3 = GetRotationMat<T>(angles);
         return math::Mat4<T>(
                 {rotMat3[0][0],rotMat3[0][1],rotMat3[0][2],0},
                 {rotMat3[1][0],rotMat3[1][1],rotMat3[1][2],0},
@@ -933,7 +933,7 @@ namespace math
     template <typename T = float>
     Mat4<T> GetScaleMat4(const Vec3<T>& scale)
     {
-        auto scaleMat3 = GetScaleMat(scale);
+        auto scaleMat3 = GetScaleMat<T>(scale);
         return math::Mat4<T>(
                 {scaleMat3[0][0], scaleMat3[0][1], scaleMat3[0][2], 0},
                 {scaleMat3[1][0], scaleMat3[1][1], scaleMat3[1][2], 0},
@@ -1050,8 +1050,8 @@ namespace math
         auto halfFovRad = (fov / 2) * (M_PI / 180.0f);
 
         return Mat4<T>(
-                {-static_cast<T>(1)/(tanf(halfFovRad) * aspectRatio), 0, 0, 0},
-                {0,-static_cast<T>(1)/tanf(halfFovRad), 0, 0},
+                {static_cast<T>(1)/(tanf(halfFovRad) * aspectRatio), 0, 0, 0},
+                {0,static_cast<T>(1)/tanf(halfFovRad), 0, 0},
                 {0,0,-zFar / (zNear - zFar),1},
                 {0,0,(zFar * zNear) / (zFar - zNear),0});
     }
