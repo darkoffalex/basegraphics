@@ -65,7 +65,7 @@ public:
          * @param callUpdateCallbackFunction Вызывать функцию обратного вызова установленную к скелета
          * @param calcFlags Опции вычисления матриц (какие матрицы считать)
          */
-        void calculateBranch(bool callUpdateCallbackFunction = true, unsigned calcFlags = CalcFlags::eFullTransform | CalcFlags::eBindTransform | CalcFlags::eInverseBindTransform)
+        void calculateBranch(unsigned calcFlags = CalcFlags::eFullTransform | CalcFlags::eBindTransform | CalcFlags::eInverseBindTransform)
         {
             // Если у кости есть родительская кость
             if(pParentBone_ != nullptr)
@@ -107,7 +107,7 @@ public:
             // Рекурсивно выполнить для дочерних элементов (если они есть)
             if(!this->childrenBones_.empty()){
                 for(auto& childBone : this->childrenBones_){
-                    childBone->calculateBranch(false, calcFlags);
+                    childBone->calculateBranch(calcFlags);
                 }
             }
         }
@@ -185,7 +185,7 @@ public:
         void setLocalTransform(const math::Mat4<float>& transform, bool recalculateBranch = true)
         {
             this->localTransform_ = transform;
-            if(recalculateBranch) this->calculateBranch(true, CalcFlags::eFullTransform);
+            if(recalculateBranch) this->calculateBranch(CalcFlags::eFullTransform);
         }
 
         /**
@@ -196,7 +196,7 @@ public:
         void setLocalBindTransform(const math::Mat4<float>& transform, bool recalculateBranch = true)
         {
             this->localBindTransform_ = transform;
-            if(recalculateBranch) this->calculateBranch(true, CalcFlags::eBindTransform|CalcFlags::eInverseBindTransform);
+            if(recalculateBranch) this->calculateBranch(CalcFlags::eBindTransform|CalcFlags::eInverseBindTransform);
         }
 
         /**
@@ -209,7 +209,7 @@ public:
         {
             this->localBindTransform_ = localBind;
             this->localTransform_ = local;
-            if(recalculateBranch) this->calculateBranch(true, CalcFlags::eFullTransform|CalcFlags::eBindTransform|CalcFlags::eInverseBindTransform);
+            if(recalculateBranch) this->calculateBranch(CalcFlags::eFullTransform|CalcFlags::eBindTransform|CalcFlags::eInverseBindTransform);
         }
 
         /**
@@ -323,7 +323,7 @@ public:
     void setGlobalInverseTransform(const math::Mat4<float>& m)
     {
         this->globalInverseTransform_ = m;
-        this->getRootBone()->calculateBranch(true,Bone::CalcFlags::eNone);
+        this->getRootBone()->calculateBranch(Bone::CalcFlags::eNone);
     }
 
     /**
