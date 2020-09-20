@@ -9,23 +9,23 @@
  */
 enum ErrorCode
 {
-    NO_ERRORS,
-    CLASS_REGISTRATION_ERROR,
-    WINDOW_CREATION_ERROR,
+    eNoErrors,
+    eClassRegistrationError,
+    eWindowCreationError,
 };
 
 /// Дескриптор исполняемого модуля программы
-HINSTANCE _hInstance = nullptr;
+HINSTANCE g_hInstance = nullptr;
 /// Дескриптор осноного окна отрисовки
-HWND _hwnd = nullptr;
+HWND g_hwnd = nullptr;
 /// Дескриптор контекста отрисовки
-HDC _hdc = nullptr;
+HDC g_hdc = nullptr;
 /// Наименование класса
-const char* _strClassName = "MainWindowClass";
+const char* g_strClassName = "MainWindowClass";
 /// Заголовок окна
-const char* _strWindowCaption = "DemoApp";
+const char* g_strWindowCaption = "DemoApp";
 /// Код последней ошибки
-ErrorCode _lastError = ErrorCode::NO_ERRORS;
+ErrorCode g_lastError = ErrorCode::eNoErrors;
 
 /**
  * Обработчик оконных сообщений
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 {
     try {
         // Получение дескриптора исполняемого модуля программы
-        _hInstance = GetModuleHandle(nullptr);
+        g_hInstance = GetModuleHandle(nullptr);
 
         // Информация о классе
         WNDCLASSEX classInfo;
@@ -64,48 +64,48 @@ int main(int argc, char* argv[])
         classInfo.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
         classInfo.cbClsExtra = 0;
         classInfo.cbWndExtra = 0;
-        classInfo.hInstance = _hInstance;
-        classInfo.hIcon = LoadIcon(_hInstance, IDI_APPLICATION);
-        classInfo.hIconSm = LoadIcon(_hInstance, IDI_APPLICATION);
+        classInfo.hInstance = g_hInstance;
+        classInfo.hIcon = LoadIcon(g_hInstance, IDI_APPLICATION);
+        classInfo.hIconSm = LoadIcon(g_hInstance, IDI_APPLICATION);
         classInfo.hCursor = LoadCursor(nullptr, IDC_ARROW);
         classInfo.hbrBackground = CreateSolidBrush(RGB(240, 240, 240));
         classInfo.lpszMenuName = nullptr;
-        classInfo.lpszClassName = _strClassName;
+        classInfo.lpszClassName = g_strClassName;
         classInfo.lpfnWndProc = WindowProcedure;
 
         // Пытаемся зарегистрировать оконный класс
         if (!RegisterClassEx(&classInfo)) {
-            _lastError = ErrorCode::CLASS_REGISTRATION_ERROR;
+            g_lastError = ErrorCode::eClassRegistrationError;
             throw std::runtime_error("ERROR: Can't register window class.");
         }
 
         // Создание окна
-        _hwnd = CreateWindow(
-                _strClassName,
-                _strWindowCaption,
+        g_hwnd = CreateWindow(
+                g_strClassName,
+                g_strWindowCaption,
                 WS_OVERLAPPEDWINDOW,
                 0, 0,
                 800, 600,
                 nullptr,
                 nullptr,
-                _hInstance,
+                g_hInstance,
                 nullptr);
 
         // Если не удалось создать окно
-        if (!_hwnd) {
-            _lastError = ErrorCode::WINDOW_CREATION_ERROR;
+        if (!g_hwnd) {
+            g_lastError = ErrorCode::eWindowCreationError;
             throw std::runtime_error("ERROR: Can't create main application window.");
         }
 
         // Показать окно
-        ShowWindow(_hwnd, SW_SHOWNORMAL);
+        ShowWindow(g_hwnd, SW_SHOWNORMAL);
 
         // Получение контекста отрисовки
-        _hdc = GetDC(_hwnd);
+        g_hdc = GetDC(g_hwnd);
 
         // Размеры клиентской области окна
         RECT clientRect;
-        GetClientRect(_hwnd, &clientRect);
+        GetClientRect(g_hwnd, &clientRect);
 
         // Создать буффер кадра
         auto frameBuffer = gfx::ImageBuffer<RGBQUAD>(clientRect.right, clientRect.bottom, {0, 0, 0, 0});
@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
             }
 
             // Показ кадра
-            PresentFrame(frameBuffer.getData(), static_cast<int>(frameBuffer.getWidth()), static_cast<int>(frameBuffer.getHeight()),_hwnd);
+            PresentFrame(frameBuffer.getData(), static_cast<int>(frameBuffer.getWidth()), static_cast<int>(frameBuffer.getHeight()), g_hwnd);
         }
     }
     catch(std::exception& ex)
@@ -156,12 +156,12 @@ int main(int argc, char* argv[])
     }
 
     // Уничтожение окна
-    DestroyWindow(_hwnd);
+    DestroyWindow(g_hwnd);
     // Вырегистрировать класс окна
-    UnregisterClass(_strClassName,_hInstance);
+    UnregisterClass(g_strClassName, g_hInstance);
 
     // Код выполнения/ошибки
-    return static_cast<int>(_lastError);
+    return static_cast<int>(g_lastError);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
