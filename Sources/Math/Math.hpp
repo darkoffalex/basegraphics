@@ -1052,7 +1052,7 @@ namespace math
         return Mat4<T>(
                 {static_cast<T>(1)/(tanf(halfFovRad) * aspectRatio), 0, 0, 0},
                 {0,static_cast<T>(1)/tanf(halfFovRad), 0, 0},
-                {0,0,-zFar / (zNear - zFar),1},
+                {0,0,-zFar / (zNear - zFar),-1},
                 {0,0,(zFar * zNear) / (zFar - zNear),0});
     }
 

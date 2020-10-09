@@ -1,5 +1,10 @@
 #include <iostream>
 #include <Windows.h>
+#include <cstdlib>
+#include <ctime>
+#include <chrono>
+
+#include <random>
 
 #include <Math.hpp>
 #include <Gfx.hpp>
@@ -45,6 +50,22 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT message, WPARAM wParam, LPARAM 
  * @param hWnd Дескриптор окна
  */
 void PresentFrame(void *pixels, int width, int height, HWND hWnd);
+
+/**
+ * Нарисовать линейные примитивы
+ * @param imageBuffer Указатель на кадровый буфер
+ * @param projectedToNdcPoints Точки спроецированные в NDC пространство
+ * @param pointsPerPrimitive Количество точек на один примитив
+ */
+void DrawLinePrimitives(gfx::ImageBuffer<RGBQUAD>* imageBuffer, const std::vector<math::Vec2<float>>& projectedToNdcPoints, uint32_t pointsPerPrimitive);
+
+/**
+ * Спроецировать точки в NDC
+ * @param mProjection Матрица проекции
+ * @param points Массив точек в пространстве мира
+ * @return Массив спроецированных точек (без учета глубины)
+ */
+std::vector<math::Vec2<float>> ProjectPoints(const math::Mat4<float>& mProjection, const std::vector<math::Vec3<float>>& points);
 
 /**
  * Точка входа
@@ -114,58 +135,33 @@ int main(int argc, char* argv[])
         // Пропорции области вида
         float aspectRatio = static_cast<float>(clientRect.right) / static_cast<float>(clientRect.bottom);
 
-        // Положения вершин куба
-        std::vector<math::Vec3<float>> vertices {
-                {-1.0f,1.0f,1.0f},
-                {1.0f,1.0f,1.0f},
-                {1.0f,-1.0f,1.0f},
-                {-1.0f,-1.0f,1.0f},
+        // Матрица проекции
+        math::Mat4<float> mProjection = math::GetProjectionMatPerspective(90.0f,aspectRatio,0.0f,100.0f);
 
-                {-1.0f,1.0f,-1.0f},
-                {1.0f,1.0f,-1.0f},
-                {1.0f,-1.0f,-1.0f},
-                {-1.0f,-1.0f,-1.0f}
+        // Точки линий
+        std::vector<math::Vec3<float>> linePoints {
         };
 
-        // Индексы (тройки вершин)
-        std::vector<size_t> indices {
-                0,1,2, 2,3,0,
-                1,5,6, 6,2,1,
-                5,4,7, 7,6,5,
-                4,0,3, 3,7,4,
-                4,5,1, 1,0,4,
-                3,2,6, 6,7,3
+        // Точки квадрата (квадрат впереди на -4 единицы)
+        std::vector<math::Vec3<float>> quadPoints = {
+                {-1.0f,1.0f,-2.0f},
+                {1.0f,1.0f,-2.0f},
+                {1.0f,-1.0f,-2.0f},
+                {-1.0f,-1.0f,-2.0f}
         };
 
-        // Пройти по всем индексам (шаг - 3 индекса)
-        for(size_t i = 3; i <= indices.size(); i+=3)
-        {
-            // Пройтись по тройке индексов (по 2 чтобы игнорировать диагональные соединения)
-            for(size_t j = 0; j < 2; j++)
-            {
-                // Получить положение двух точек
-                auto p0 = vertices[indices[(i-3)+j]];
-                auto p1 = vertices[indices[(i-3)+((j + 1) % 3)]];
+        // Положение источника света
+        math::Vec3<float> lightPosition = {0.0f,0.0f,-2.0f};
+        // Положение точки из которой в сторону источника будут сгенерированы линии
+        math::Vec3<float> pointPosition = {0.0f,0.0f,-0.1f};
+        // Радиус источника света
+        float lightRadius = 1.0f;
+        // Вектор направления к источнику
+        auto toLight = math::Normalize(lightPosition - pointPosition);
 
-                // Сдвигаем точки
-                p0 = p0 + math::Vec3<float>(0.0f,0.0f,-4.0f);
-                p1 = p1 + math::Vec3<float>(0.0f,0.0f,-4.0f);
-
-                // Проекция положений двух точек
-//                auto pp0 = math::ProjectOrthogonal(p0,-2.0f,2.0f,-2.0f,2.0f,0.1f,100.0f,aspectRatio);
-//                auto pp1 = math::ProjectOrthogonal(p1,-2.0f,2.0f,-2.0f,2.0f,0.1f,100.0f,aspectRatio);
-
-                auto pp0 = math::ProjectPerspective(p0,90.0f,0.1f,100.0f,aspectRatio);
-                auto pp1 = math::ProjectPerspective(p1,90.0f,0.1f,100.0f,aspectRatio);
-
-                // Положение в пространстве экрана
-                auto sp0 = math::NdcToScreen({pp0.x, pp0.y}, frameBuffer.getWidth(), frameBuffer.getHeight());
-                auto sp1 = math::NdcToScreen({pp1.x, pp1.y}, frameBuffer.getWidth(), frameBuffer.getHeight());
-
-                // Написовать линию
-                gfx::SetLine(&frameBuffer,sp0.x,sp0.y,sp1.x,sp1.y,{0,255,0,0},gfx::SAFE_CHECK_ALL_POINTS);
-            }
-        }
+        // Генератор случайных чисел
+        std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+        std::default_random_engine rndEngine(static_cast<unsigned>(ms.count()));
 
         /** MAIN LOOP **/
 
@@ -185,8 +181,46 @@ int main(int argc, char* argv[])
                 }
             }
 
+            // Очистить точки
+            linePoints.clear();
+
+            // Рандомизация
+            ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+            rndEngine.seed(static_cast<unsigned>(ms.count()));
+            std::uniform_real_distribution<float> vectorDist(-1.0f,1.0f);
+            std::uniform_real_distribution<float> radiusDist(0.0f,1.0f);
+
+            for(uint32_t i = 0; i < 100; i++)
+            {
+                // Случайные значения компонентов вектора для генерации перпендикуряра
+                float xR = vectorDist(rndEngine);
+                float yR = vectorDist(rndEngine);
+                float zR = vectorDist(rndEngine);
+
+                // Случайное значение множителя радиуса
+                float rR = radiusDist(rndEngine);
+
+                // Получить случайную точку диске
+                auto randomPerpendicular = math::Normalize(math::Cross(toLight, toLight + math::Vec3<float>(xR, yR, zR)));
+                auto edgePoint = lightPosition + (randomPerpendicular * lightRadius * rR);
+
+                linePoints.push_back(lightPosition);
+                linePoints.push_back(edgePoint);
+            }
+
+
+            // Точки после преобразований (2D)
+            std::vector<math::Vec2<float>> quadPointsTransformed = ProjectPoints(mProjection, quadPoints);
+            std::vector<math::Vec2<float>> linePointsTransformed = ProjectPoints(mProjection, linePoints);
+            // Нарисовать спроецированные примитивы
+            DrawLinePrimitives(&frameBuffer,quadPointsTransformed,4);
+            DrawLinePrimitives(&frameBuffer,linePointsTransformed,2);
+
             // Показ кадра
             PresentFrame(frameBuffer.getData(), static_cast<int>(frameBuffer.getWidth()), static_cast<int>(frameBuffer.getHeight()), g_hwnd);
+
+            // Очистка кадра
+            frameBuffer.clear({0,0,0,0});
         }
     }
     catch(std::exception& ex)
@@ -286,4 +320,53 @@ void PresentFrame(void *pixels, int width, int height, HWND hWnd)
     DeleteDC(srcHdc);
     // Уничтожить DC
     ReleaseDC(hWnd,hdc);
+}
+
+/**
+ * Нарисовать линейные примитивы
+ * @param imageBuffer Указатель на кадровый буфер
+ * @param projectedToNdcPoints Точки спроецированные в NDC пространство
+ * @param pointsPerPrimitive Количество точек на один примитив
+ */
+void DrawLinePrimitives(gfx::ImageBuffer<RGBQUAD>* imageBuffer, const std::vector<math::Vec2<float>> &projectedToNdcPoints, uint32_t pointsPerPrimitive)
+{
+    for(size_t i = 0; i < projectedToNdcPoints.size(); i+=pointsPerPrimitive)
+    {
+        for(size_t j = i; j < i + pointsPerPrimitive; j++)
+        {
+            // Индексы двух точек
+            size_t i0 = j;
+            size_t i1 = ((j+1) > (i+pointsPerPrimitive-1) ? i : j+1);
+
+            // Перевести точки в координаты экрана
+            auto ps0 = math::NdcToScreen(projectedToNdcPoints[i0],imageBuffer->getWidth(),imageBuffer->getHeight());
+            auto ps1 = math::NdcToScreen(projectedToNdcPoints[i1],imageBuffer->getWidth(),imageBuffer->getHeight());
+
+            // Нарисовать линию соединяющую точки
+            gfx::SetLine(imageBuffer,ps0.x,ps0.y,ps1.x,ps1.y,{0,255,0});
+        }
+    }
+}
+
+/**
+ * Спроецировать точки в NDC
+ * @param mProjection Матрица проекции
+ * @param points Массив точек в пространстве мира
+ * @return Массив спроецированных точек (без учета глубины)
+ */
+std::vector<math::Vec2<float>> ProjectPoints(const math::Mat4<float> &mProjection, const std::vector<math::Vec3<float>> &points)
+{
+    std::vector<math::Vec2<float>> result{};
+
+    for(const auto& point : points)
+    {
+        // Проекция
+        auto vt = mProjection * math::Vec4<float>({point.x,point.y,point.z,1.0f});
+        // Перспективное деление
+        vt = vt / vt.w;
+        // Добавить в итоговый массив
+        result.emplace_back(vt.x,vt.y);
+    }
+
+    return result;
 }

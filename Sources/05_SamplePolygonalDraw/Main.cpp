@@ -402,7 +402,7 @@ void DrawMesh(gfx::ImageBuffer<RGBQUAD>* frameBuffer,
                 ));
 
                 // Яркость тем сильнее, чем больше грань обернута к свету (считаем что свет исходит от зрителя)
-                brightness = math::Dot(normal,{0.0f, 0.0f, 1.0f});
+                brightness = std::max(math::Dot(normal,{0.0f, 0.0f, 1.0f}),0.0f);
             }
 
             // Написовать треугольник
