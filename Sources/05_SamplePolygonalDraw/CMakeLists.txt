@@ -14,6 +14,7 @@ set_property(TARGET ${TARGET_NAME} PROPERTY OUTPUT_NAME "${TARGET_BIN_NAME}$<$<C
 
 # Статическая линковка рантайма и стандартных библиотек
 if(MSVC)
+    set_property(TARGET ${TARGET_NAME} PROPERTY COMPILE_FLAGS "-DNOMINMAX")
     set_property(TARGET ${TARGET_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
     set_property(TARGET ${TARGET_NAME} PROPERTY LINK_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive")
